@@ -1,4 +1,4 @@
-package com.unicauca.fiet.sistema_electivas;
+package com.unicauca.fiet.sistema_electivas.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -29,7 +29,7 @@ public class ElectivaOfertada {
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "periodo_id", nullable = false)
-    private com.unicauca.fiet.sistema_electivas.PeriodoAcademico periodo;
+    private PeriodoAcademico periodo;
 
     @NotNull
     @Column(name = "cupos_por_programa", nullable = false)

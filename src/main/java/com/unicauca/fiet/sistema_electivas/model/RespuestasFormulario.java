@@ -1,4 +1,4 @@
-package com.unicauca.fiet.sistema_electivas;
+package com.unicauca.fiet.sistema_electivas.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;

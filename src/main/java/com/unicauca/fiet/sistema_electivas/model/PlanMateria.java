@@ -1,4 +1,4 @@
-package com.unicauca.fiet.sistema_electivas;
+package com.unicauca.fiet.sistema_electivas.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -12,7 +12,8 @@ import org.hibernate.annotations.ColumnDefault;
 @Table(name = "plan_materia")
 public class PlanMateria {
     @Id
-    @ColumnDefault("nextval('plan_materia_id_seq')")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "plan_materia_seq")
+    @SequenceGenerator(name = "plan_materia_seq", sequenceName = "plan_materia_seq", allocationSize = 1)
     @Column(name = "id", nullable = false)
     private Long id;
 
@@ -31,7 +32,7 @@ public class PlanMateria {
 
     @NotNull
     @Column(name = "tipo", nullable = false, length = Integer.MAX_VALUE)
-    private String tipo;
+    private String tipo;// OBLIGATORIA | ELECTIVA | TRABAJO_GRADO
 
     @NotNull
     @Column(name = "creditos", nullable = false)

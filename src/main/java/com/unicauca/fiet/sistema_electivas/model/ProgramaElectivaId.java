@@ -1,4 +1,4 @@
-package com.unicauca.fiet.sistema_electivas;
+package com.unicauca.fiet.sistema_electivas.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;

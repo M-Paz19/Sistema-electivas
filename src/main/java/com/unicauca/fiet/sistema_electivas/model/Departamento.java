@@ -1,4 +1,4 @@
-package com.unicauca.fiet.sistema_electivas;
+package com.unicauca.fiet.sistema_electivas.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,10 +12,10 @@ import org.hibernate.annotations.ColumnDefault;
 @Getter
 @Setter
 @Entity
-@Table(name = "programa")
-public class Programa {
+@Table(name = "departamento")
+public class Departamento {
     @Id
-    @ColumnDefault("nextval('programa_id_seq')")
+    @ColumnDefault("nextval('departamento_id_seq')")
     @Column(name = "id", nullable = false)
     private Long id;
 
@@ -26,6 +26,9 @@ public class Programa {
     @NotNull
     @Column(name = "nombre", nullable = false, length = Integer.MAX_VALUE)
     private String nombre;
+
+    @Column(name = "descripcion", length = Integer.MAX_VALUE)
+    private String descripcion;
 
     @NotNull
     @Column(name = "estado", nullable = false, length = Integer.MAX_VALUE)

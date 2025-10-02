@@ -1,5 +1,6 @@
-package com.unicauca.fiet.sistema_electivas;
+package com.unicauca.fiet.sistema_electivas.model;
 
+import com.unicauca.fiet.sistema_electivas.enums.EstadoPrograma;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -9,10 +10,11 @@ import org.hibernate.annotations.ColumnDefault;
 @Getter
 @Setter
 @Entity
-@Table(name = "electiva")
-public class Electiva {
+@Table(name = "programa")
+public class Programa {
     @Id
-    @ColumnDefault("nextval('electiva_id_seq')")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "programa_seq")
+    @SequenceGenerator(name = "programa_seq", sequenceName = "programa_id_seq", allocationSize = 1)
     @Column(name = "id", nullable = false)
     private Long id;
 
@@ -24,16 +26,9 @@ public class Electiva {
     @Column(name = "nombre", nullable = false, length = Integer.MAX_VALUE)
     private String nombre;
 
-    @Column(name = "descripcion", length = Integer.MAX_VALUE)
-    private String descripcion;
-
     @NotNull
     @Column(name = "estado", nullable = false, length = Integer.MAX_VALUE)
-    private String estado;
-
-    @NotNull
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "departamento_id", nullable = false)
-    private Departamento departamento;
+    @Enumerated(EnumType.STRING)
+    private EstadoPrograma estado;
 
 }

@@ -1,9 +1,6 @@
-package com.unicauca.fiet.sistema_electivas;
+package com.unicauca.fiet.sistema_electivas.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
@@ -12,10 +9,10 @@ import org.hibernate.annotations.ColumnDefault;
 @Getter
 @Setter
 @Entity
-@Table(name = "departamento")
-public class Departamento {
+@Table(name = "electiva")
+public class Electiva {
     @Id
-    @ColumnDefault("nextval('departamento_id_seq')")
+    @ColumnDefault("nextval('electiva_id_seq')")
     @Column(name = "id", nullable = false)
     private Long id;
 
@@ -33,5 +30,10 @@ public class Departamento {
     @NotNull
     @Column(name = "estado", nullable = false, length = Integer.MAX_VALUE)
     private String estado;
+
+    @NotNull
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "departamento_id", nullable = false)
+    private Departamento departamento;
 
 }
