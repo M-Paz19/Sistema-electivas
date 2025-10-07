@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDate;
+
 /**
  * DTO utilizado para devolver la información de un {@code PlanEstudio}.
  */
@@ -15,6 +17,8 @@ public class PlanEstudioResponse {
     private String nombre;
     private String version;
     private String estado;
+    private LocalDate vigenciaInicio;
+    private LocalDate vigenciaFin;
     private Long programaId;
     private String mensaje;
 }

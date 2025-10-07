@@ -1,5 +1,6 @@
 package com.unicauca.fiet.sistema_electivas.repository;
 
+import com.unicauca.fiet.sistema_electivas.enums.EstadoPlanEstudio;
 import com.unicauca.fiet.sistema_electivas.model.PlanEstudio;
 import com.unicauca.fiet.sistema_electivas.model.Programa;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -30,4 +31,23 @@ public interface PlanEstudioRepository extends JpaRepository<PlanEstudio, Long> 
      * @return lista de planes de estudio
      */
     List<PlanEstudio> findByPrograma(Programa programa);
+
+    /**
+     * Lista los planes de estudio de un programa filtrando por estado.
+     *
+     * @param programa programa académico
+     * @param estado   estado del plan de estudio
+     * @return lista filtrada de planes
+     */
+    List<PlanEstudio> findByProgramaAndEstado(Programa programa, EstadoPlanEstudio estado);
+
+    /**
+     * Cuenta la cantidad de planes para un programa y estado especifico
+     *
+     * @param programa programa académico
+     * @param estado   estado del plan de estudio
+     * @return lista filtrada de planes
+     */
+    long countByProgramaAndEstado(Programa programa, EstadoPlanEstudio estado);
+
 }

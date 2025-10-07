@@ -10,6 +10,9 @@ import lombok.Setter;
 
 import java.util.Map;
 
+/**
+ * DTO utilizado para recibir una peticion de la configuracion de {@code PlanEstudio} junto con la malla curricular.
+ */
 @Getter
 @Setter
 @AllArgsConstructor

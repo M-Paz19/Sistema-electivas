@@ -1,7 +1,13 @@
 package com.unicauca.fiet.sistema_electivas.controller;
 
+import com.unicauca.fiet.sistema_electivas.dto.ActualizarElectivaDTO;
+import com.unicauca.fiet.sistema_electivas.dto.CrearElectivaDTO;
+import com.unicauca.fiet.sistema_electivas.dto.ElectivaResponseDTO;
+import com.unicauca.fiet.sistema_electivas.exception.GlobalExceptionHandler;
+import com.unicauca.fiet.sistema_electivas.exception.ResourceNotFoundException;
 import com.unicauca.fiet.sistema_electivas.model.Electiva;
 import com.unicauca.fiet.sistema_electivas.service.ElectivaServiceImpl;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,15 +22,23 @@ public class ElectivaController {
     @Autowired
     private ElectivaServiceImpl electivaService;
 
+    /**
+     * Crea una nueva electiva en el sistema.
+     *
+     * <p>Valida los datos de entrada y delega la lógica de creación al servicio correspondiente.
+     * Las excepciones de validación, duplicados o recursos no encontrados se manejan
+     * automáticamente por el {@link GlobalExceptionHandler}.
+     *
+     * @param dto Datos necesarios para crear la electiva
+     * @return Detalle de la electiva creada
+     */
     @PostMapping
-    public ResponseEntity<?> crearElectiva(@RequestBody Electiva electiva) {
-        try {
-            Electiva nuevaElectiva = electivaService.crearElectiva(electiva);
-            return new ResponseEntity<>(nuevaElectiva, HttpStatus.CREATED);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    public ResponseEntity<ElectivaResponseDTO> crearElectiva(@Valid @RequestBody CrearElectivaDTO dto) {
+        ElectivaResponseDTO response = electivaService.crearElectiva(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+
+
 
     @GetMapping
     public ResponseEntity<List<Electiva>> buscarElectivas(
@@ -40,19 +54,20 @@ public class ElectivaController {
     @PutMapping("/{id}")
     public ResponseEntity<?> actualizarElectiva(
             @PathVariable Long id,
-            @RequestBody Electiva electiva) {
+            @RequestBody @Valid ActualizarElectivaDTO dto) {
         try {
-            Electiva electivaActualizada = electivaService.actualizarElectiva(id, electiva);
+            Electiva electivaActualizada = electivaService.actualizarElectiva(id, dto);
             return ResponseEntity.ok(electivaActualizada);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
-        } catch (RuntimeException e) {
+        } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error al actualizar electiva: " + e.getMessage());
         }
     }
+
 
     @PatchMapping("/{id}/aprobar")
     public ResponseEntity<?> aprobarElectiva(@PathVariable Long id) {
@@ -69,10 +84,16 @@ public class ElectivaController {
         try {
             electivaService.desactivarElectiva(id);
             return ResponseEntity.ok("Electiva desactivada exitosamente");
-        } catch (RuntimeException e) {
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body("Error al desactivar electiva: " + e.getMessage());
         }
     }
+
 
     @PatchMapping("/{id}/reactivar")
     public ResponseEntity<?> reactivarElectiva(@PathVariable Long id) {

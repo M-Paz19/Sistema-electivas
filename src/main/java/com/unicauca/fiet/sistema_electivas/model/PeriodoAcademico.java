@@ -1,9 +1,7 @@
 package com.unicauca.fiet.sistema_electivas.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.unicauca.fiet.sistema_electivas.enums.EstadoPeriodoAcademico;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
@@ -17,7 +15,8 @@ import java.time.Instant;
 @Table(name = "periodo_academico")
 public class PeriodoAcademico {
     @Id
-    @ColumnDefault("nextval('periodo_academico_id_seq')")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "periodo_academico_seq")
+    @SequenceGenerator(name = "periodo_academico_seq", sequenceName = "periodo_academico_seq", allocationSize = 1)
     @Column(name = "id", nullable = false)
     private Long id;
 
@@ -34,7 +33,8 @@ public class PeriodoAcademico {
     private Instant fechaCierre;
 
     @NotNull
-    @Column(name = "estado", nullable = false, length = Integer.MAX_VALUE)
-    private String estado;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado", nullable = false, length = 30)
+    private EstadoPeriodoAcademico estado;
 
 }

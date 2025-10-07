@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 /**
@@ -22,6 +23,11 @@ public class PlanEstudioRequest {
 
     @NotBlank(message = "La versión es obligatoria")
     private String version;
+
+    @NotNull(message = "La fecha de inicio de vigencia del plan es obligatoria")
+    private LocalDate vigenciaInicio;
+
+    private LocalDate vigenciaFin;
 
     private Map<String, Object> reglasNivelacion;
 

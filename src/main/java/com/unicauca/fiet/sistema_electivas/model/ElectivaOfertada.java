@@ -1,5 +1,6 @@
 package com.unicauca.fiet.sistema_electivas.model;
 
+import com.unicauca.fiet.sistema_electivas.enums.EstadoElectivaOfertada;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -34,10 +35,12 @@ public class ElectivaOfertada {
     @NotNull
     @Column(name = "cupos_por_programa", nullable = false)
     @JdbcTypeCode(SqlTypes.JSON)
-    private Map<String, Object> cuposPorPrograma;
+    private Map<Long, Integer> cuposPorPrograma;
 
-    @Column(name = "estado", length = Integer.MAX_VALUE)
-    private String estado;
+    @NotNull
+    @Column(name = "estado", nullable = false, length = Integer.MAX_VALUE)
+    @Enumerated(EnumType.STRING)
+    private EstadoElectivaOfertada estado;
 
     @NotNull
     @Column(name = "fecha_creacion", nullable = false)

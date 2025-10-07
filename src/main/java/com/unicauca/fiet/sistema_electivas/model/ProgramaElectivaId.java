@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.hibernate.Hibernate;
 
@@ -12,6 +13,7 @@ import java.util.Objects;
 
 @Getter
 @Setter
+@RequiredArgsConstructor
 @Embeddable
 public class ProgramaElectivaId implements Serializable {
     private static final long serialVersionUID = -5716607302308062657L;
@@ -22,6 +24,11 @@ public class ProgramaElectivaId implements Serializable {
     @NotNull
     @Column(name = "electiva_id", nullable = false)
     private Long electivaId;
+
+    public ProgramaElectivaId(Long programaId, Long electivaId) {
+        this.programaId = programaId;
+        this.electivaId = electivaId;
+    }
 
     @Override
     public boolean equals(Object o) {

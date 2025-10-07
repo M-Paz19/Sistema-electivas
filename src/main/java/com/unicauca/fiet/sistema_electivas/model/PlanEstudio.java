@@ -10,6 +10,7 @@ import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 @Getter
@@ -36,6 +37,13 @@ public class PlanEstudio {
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", nullable = false, columnDefinition = "varchar default 'CONFIGURACION_PENDIENTE'")
     private EstadoPlanEstudio estado = EstadoPlanEstudio.CONFIGURACION_PENDIENTE;
+
+    @NotNull
+    @Column(name = "vigencia_inicio", nullable = false)
+    private LocalDate vigenciaInicio;
+
+    @Column(name = "vigencia_fin")
+    private LocalDate vigenciaFin;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

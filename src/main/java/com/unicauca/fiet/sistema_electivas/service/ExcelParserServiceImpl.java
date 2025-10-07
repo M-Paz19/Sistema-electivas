@@ -37,6 +37,9 @@ public class ExcelParserServiceImpl implements ExcelParserService {
             Map.entry("sem.", "semestre")
     );
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public List<PlanMateria> parsearMaterias(MultipartFile file, PlanEstudio plan) {
         if (file == null || file.isEmpty()) {
