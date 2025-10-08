@@ -1,5 +1,6 @@
 package com.unicauca.fiet.sistema_electivas.model;
 
+import com.unicauca.fiet.sistema_electivas.periodo_academico.model.ElectivaOfertada;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
