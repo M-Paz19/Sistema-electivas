@@ -104,7 +104,7 @@ public class ElectivaServiceImpl implements ElectivaService {
                 .collect(Collectors.toList());
         programaElectivaRepository.saveAll(relaciones);
 
-        return ElectivaMapper.toResponse(nuevaElectiva);
+        return ElectivaMapper.toResponse(nuevaElectiva, relaciones);
     }
 
     /**
@@ -187,7 +187,7 @@ public class ElectivaServiceImpl implements ElectivaService {
         programaElectivaRepository.saveAll(relaciones);
 
         Electiva electivaActualizada = electivaRepository.save(electiva);
-        return ElectivaMapper.toResponse(electivaActualizada);
+        return ElectivaMapper.toResponse(electivaActualizada,relaciones);
     }
 
     /**
@@ -248,13 +248,13 @@ public class ElectivaServiceImpl implements ElectivaService {
     @Override
     public List<ElectivaResponseDTO> findElectivas(boolean mostrarInactivas, String query) {
         List<Electiva> resultado;
+
         if (query != null && !query.trim().isEmpty()) {
             resultado = electivaRepository.findByNombreContainingIgnoreCaseOrCodigoContainingIgnoreCase(query, query);
         } else {
             resultado = electivaRepository.findAll();
         }
 
-        // ⚙️ Filtrar inactivas si no deben mostrarse
         if (!mostrarInactivas) {
             resultado = resultado.stream()
                     .filter(e -> e.getEstado() != EstadoElectiva.INACTIVA)
@@ -262,7 +262,10 @@ public class ElectivaServiceImpl implements ElectivaService {
         }
 
         return resultado.stream()
-                .map(ElectivaMapper::toResponse)
+                .map(electiva -> {
+                    List<ProgramaElectiva> programas = programaElectivaRepository.findByElectivaId(electiva.getId());
+                    return ElectivaMapper.toResponse(electiva, programas);
+                })
                 .collect(Collectors.toList());
     }
     /**
@@ -271,8 +274,14 @@ public class ElectivaServiceImpl implements ElectivaService {
     @Override
     @Transactional
     public ElectivaResponseDTO buscarPorId(Long id) {
+        // Buscar la electiva o lanzar excepción si no existe
         Electiva electiva = electivaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Electiva no encontrada con id: " + id));
-        return ElectivaMapper.toResponse(electiva);
+
+        // Obtener los programas asociados desde la tabla intermedia
+        List<ProgramaElectiva> programasAsociados = programaElectivaRepository.findByElectivaId(id);
+
+        // Mapear la respuesta con los programas incluidos
+        return ElectivaMapper.toResponse(electiva, programasAsociados);
     }
 }

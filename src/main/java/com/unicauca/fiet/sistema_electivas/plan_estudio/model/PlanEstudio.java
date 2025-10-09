@@ -38,11 +38,8 @@ public class PlanEstudio {
     private EstadoPlanEstudio estado = EstadoPlanEstudio.CONFIGURACION_PENDIENTE;
 
     @NotNull
-    @Column(name = "vigencia_inicio", nullable = false)
-    private LocalDate vigenciaInicio;
-
-    @Column(name = "vigencia_fin")
-    private LocalDate vigenciaFin;
+    @Column(name = "anio_inicio", nullable = false)
+    private Integer anioInicio;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

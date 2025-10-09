@@ -6,6 +6,14 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Instant;
+/**
+
+ DTO utilizado para crear un nuevo período académico.
+
+ <p>Contiene la información mínima necesaria para registrar un período,
+
+ incluyendo las fechas y el semestre correspondiente.</p>
+ */
 @Getter
 @Setter
 public class CrearPeriodoAcademicoDTO {

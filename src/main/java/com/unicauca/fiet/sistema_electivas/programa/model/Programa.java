@@ -5,6 +5,9 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -29,5 +32,9 @@ public class Programa {
     @Column(name = "estado", nullable = false, length = Integer.MAX_VALUE)
     @Enumerated(EnumType.STRING)
     private EstadoPrograma estado;
+
+    @CreationTimestamp
+    @Column(name = "fecha_creacion", nullable = false, updatable = false)
+    private LocalDateTime fechaCreacion;
 
 }

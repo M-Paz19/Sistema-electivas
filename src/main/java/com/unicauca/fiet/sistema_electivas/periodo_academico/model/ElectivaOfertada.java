@@ -19,7 +19,8 @@ import java.util.Map;
 @Table(name = "electiva_ofertada")
 public class ElectivaOfertada {
     @Id
-    @ColumnDefault("nextval('electiva_ofertada_id_seq')")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "electiva_ofertada_seq")
+    @SequenceGenerator(name = "electiva_ofertada_seq", sequenceName = "electiva_ofertada_seq", allocationSize = 1)
     @Column(name = "id", nullable = false)
     private Long id;
 

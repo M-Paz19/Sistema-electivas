@@ -50,4 +50,13 @@ public interface PlanEstudioRepository extends JpaRepository<PlanEstudio, Long> 
      */
     long countByProgramaAndEstado(Programa programa, EstadoPlanEstudio estado);
 
+    /**
+     * Verifica si ya existe un plan de estudio en un programa para un año específico.
+     *
+     * @param programa programa académico
+     * @param anioInicio año de inicio del plan
+     * @return true si existe un plan con ese año en el programa, false en caso contrario
+     */
+    boolean existsByProgramaAndAnioInicio(Programa programa, Integer anioInicio);
+
 }

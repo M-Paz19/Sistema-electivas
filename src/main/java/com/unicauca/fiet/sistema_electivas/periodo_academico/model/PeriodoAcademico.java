@@ -20,7 +20,7 @@ public class PeriodoAcademico {
     private Long id;
 
     @NotNull
-    @Column(name = "semestre", nullable = false, length = Integer.MAX_VALUE)
+    @Column(name = "semestre", nullable = false, length = 6, unique = true)
     private String semestre;
 
     @NotNull

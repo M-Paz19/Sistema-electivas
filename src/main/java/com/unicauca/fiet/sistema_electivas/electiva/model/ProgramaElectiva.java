@@ -23,4 +23,6 @@ public class ProgramaElectiva {
     @JoinColumn(name = "electiva_id", nullable = false)
     private Electiva electiva;
 
+
+
 }

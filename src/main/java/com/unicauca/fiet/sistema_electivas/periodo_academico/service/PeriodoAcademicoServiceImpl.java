@@ -12,6 +12,8 @@ import com.unicauca.fiet.sistema_electivas.common.exception.DuplicateResourceExc
 import com.unicauca.fiet.sistema_electivas.common.exception.InvalidStateException;
 import com.unicauca.fiet.sistema_electivas.common.exception.ResourceNotFoundException;
 import com.unicauca.fiet.sistema_electivas.electiva.model.Electiva;
+import com.unicauca.fiet.sistema_electivas.periodo_academico.mapper.ElectivaOfertadaMapper;
+import com.unicauca.fiet.sistema_electivas.periodo_academico.mapper.PeriodoAcademicoMapper;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.model.ElectivaOfertada;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.model.PeriodoAcademico;
 import com.unicauca.fiet.sistema_electivas.electiva.model.ProgramaElectiva;
@@ -19,8 +21,10 @@ import com.unicauca.fiet.sistema_electivas.periodo_academico.repository.Electiva
 import com.unicauca.fiet.sistema_electivas.electiva.repository.ElectivaRepository;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.repository.PeriodoAcademicoRepository;
 import com.unicauca.fiet.sistema_electivas.electiva.repository.ProgramaElectivaRepository;
+import com.unicauca.fiet.sistema_electivas.programa.mapper.ProgramaMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.*;
@@ -45,6 +49,9 @@ public class PeriodoAcademicoServiceImpl implements PeriodoAcademicoService {
     private ElectivaOfertadaRepository electivaOfertadaRepository;
     @Autowired
     private ProgramaElectivaRepository programaElectivaRepository;
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @Transactional
     public PeriodoAcademicoResponse crearPeriodo(CrearPeriodoAcademicoDTO dto) {
@@ -94,7 +101,7 @@ public class PeriodoAcademicoServiceImpl implements PeriodoAcademicoService {
                 );
             }
         } else {
-            // Ejemplo: 2026-2 → Apertura y cierre dentro del mismo año (julio a diciembre)
+            // Ejemplo: 2026-2 → Apertura y cierre dentro del mismo año (enero a diciembre)
             LocalDate inicioPermitido = LocalDate.of(anio, 1, 1);
             LocalDate finPermitido = LocalDate.of(anio, 12, 31);
 
@@ -109,18 +116,17 @@ public class PeriodoAcademicoServiceImpl implements PeriodoAcademicoService {
             }
         }
         // 6. Crear y guardar
-        PeriodoAcademico nuevo = new PeriodoAcademico();
-        nuevo.setSemestre(dto.getSemestre());
-        nuevo.setFechaApertura(apertura);
-        nuevo.setFechaCierre(cierre);
-        nuevo.setEstado(EstadoPeriodoAcademico.CONFIGURACION);
-        periodoRepository.save(nuevo);
-        return PeriodoAcademicoResponse.fromEntity(
-                nuevo,
-                String.format("Período académico %s creado exitosamente en estado %s", nuevo.getSemestre(), nuevo.getEstado().getDescripcion())
-        );
+
+        PeriodoAcademico nuevo = PeriodoAcademicoMapper.toEntity(dto);
+
+
+        return PeriodoAcademicoMapper.toResponse(periodoRepository.save(nuevo));
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     @Transactional
     public ElectivaOfertadaResponse agregarElectivaOfertada(Long periodoId, AgregarElectivaOfertadaDTO dto) {
         // 1. Validar período
@@ -148,32 +154,36 @@ public class PeriodoAcademicoServiceImpl implements PeriodoAcademicoService {
         Map<Long, Integer> cupos = validarYCopiarCupos(dto.getCuposPorPrograma(), electiva);
 
         // 5. Crear y guardar oferta
-        ElectivaOfertada ofertada = new ElectivaOfertada();
-        ofertada.setElectiva(electiva);
-        ofertada.setPeriodo(periodo);
-        ofertada.setCuposPorPrograma(cupos);
-        ofertada.setEstado(EstadoElectivaOfertada.OFERTADA);
-        ofertada.setFechaCreacion(Instant.now());
-        ofertada.setFechaActualizacion(Instant.now());
-
+        ElectivaOfertada ofertada = ElectivaOfertadaMapper.toEntity(dto, electiva, periodo);
         ElectivaOfertada guardada = electivaOfertadaRepository.save(ofertada);
 
-        // 6. Armar response elegante
-        return ElectivaOfertadaResponse.builder()
-                .id(guardada.getId())
-                .electivaId(electiva.getId())
-                .codigoElectiva(electiva.getCodigo())
-                .nombreElectiva(electiva.getNombre())
-                .periodoId(periodo.getId())
-                .nombrePeriodo(periodo.getSemestre())
-                .estado(guardada.getEstado())
-                .cuposPorPrograma(guardada.getCuposPorPrograma())
-                .fechaCreacion(guardada.getFechaCreacion())
-                .fechaActualizacion(guardada.getFechaActualizacion())
-                .build();
+        // 6. Transformar a DTO de respuesta
+        return ElectivaOfertadaMapper.toResponse(guardada);
     }
 
-
+    /**
+     * Valida y prepara los cupos por programa para una electiva ofertada.
+     *
+     * <p>Pasos realizados:
+     * <ul>
+     *   <li>Obtiene los programas asociados a la electiva desde la tabla intermedia {@code programa_electiva}.</li>
+     *   <li>Si no se proporcionan cupos en el DTO, reparte automáticamente 18 cupos de manera equitativa entre los programas asociados.</li>
+     *   <li>Si se proporcionan cupos, valida que:
+     *       <ul>
+     *           <li>Ningún ID de programa ni cupo sea nulo.</li>
+     *           <li>Todos los programas estén asociados a la electiva.</li>
+     *           <li>Los cupos sean positivos.</li>
+     *       </ul>
+     *   </li>
+     *   <li>Valida que la suma total de cupos sea exactamente 18.</li>
+     * </ul>
+     *
+     * @param cuposDto Mapa de IDs de programas a número de cupos, proveniente del DTO.
+     * @param electiva Entidad {@link Electiva} asociada a la oferta.
+     * @return Mapa final de cupos por programa, listo para asignar a {@link ElectivaOfertada}.
+     * @throws BusinessException si hay problemas de asociación, nulos o cupos inválidos.
+     * @throws IllegalArgumentException si la suma total de cupos no es 18.
+     */
     private Map<Long, Integer> validarYCopiarCupos(Map<Long, Integer> cuposDto, Electiva electiva) {
         Map<Long, Integer> cuposFinales = new HashMap<>();
 
@@ -181,7 +191,7 @@ public class PeriodoAcademicoServiceImpl implements PeriodoAcademicoService {
         List<ProgramaElectiva> asociaciones = programaElectivaRepository.findByElectivaId(electiva.getId());
 
         if (asociaciones.isEmpty()) {
-            throw new IllegalArgumentException(
+            throw new BusinessException(
                     "La electiva no tiene programas asociados en programa_electiva.");
         }
 
@@ -216,19 +226,19 @@ public class PeriodoAcademicoServiceImpl implements PeriodoAcademicoService {
 
             // Validar tipos y nulos
             if (programaId == null || cupos == null) {
-                throw new IllegalArgumentException("Los IDs de programa y cupos no pueden ser nulos.");
+                throw new BusinessException("Los IDs de programa y cupos no pueden ser nulos.");
             }
 
             // Validar asociación con la electiva
             if (!programasAsociados.contains(programaId)) {
-                throw new IllegalArgumentException(
+                throw new BusinessException(
                         String.format("El programa con ID %d no está asociado a la electiva.", programaId)
                 );
             }
 
             // Validar cupos positivos
             if (cupos <= 0) {
-                throw new IllegalArgumentException(
+                throw new BusinessException(
                         String.format("El número de cupos para el programa %d debe ser mayor que 0.", programaId)
                 );
             }
@@ -239,7 +249,7 @@ public class PeriodoAcademicoServiceImpl implements PeriodoAcademicoService {
 
         // 4. Validar suma total de 18 cupos exactos
         if (sumaTotal != 18) {
-            throw new IllegalArgumentException(
+            throw new BusinessException(
                     String.format("La suma total de cupos (%d) debe ser exactamente 18.", sumaTotal)
             );
         }
@@ -247,4 +257,39 @@ public class PeriodoAcademicoServiceImpl implements PeriodoAcademicoService {
         return cuposFinales;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<PeriodoAcademicoResponse> listarPeriodos(String semestreTexto, EstadoPeriodoAcademico estado) {
+        List<PeriodoAcademico> periodos;
+        //  Si ambos filtros son nulos, lista todo sin query filtrada
+        if (semestreTexto == null && estado == null) {
+            periodos = periodoRepository.findAll(Sort.by(Sort.Direction.DESC, "semestre"));
+        } else {
+            periodos = periodoRepository.buscarPorSemestreYEstado(semestreTexto, estado);
+        }
+        return periodos.stream().map(PeriodoAcademicoMapper::toResponse).collect(Collectors.toList());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<ElectivaOfertadaResponse> listarElectivasPorPeriodo(Long periodoId) {
+
+        // Validar existencia del período
+        PeriodoAcademico periodo = periodoRepository.findById(periodoId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No se encontró el período académico con ID " + periodoId
+                ));
+
+        List<ElectivaOfertada> electivas = electivaOfertadaRepository.findByPeriodoId(periodoId);
+
+        return electivas.stream()
+                .map(ElectivaOfertadaMapper::toResponse)
+                .collect(Collectors.toList());
+    }
 }

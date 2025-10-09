@@ -6,6 +6,14 @@ import lombok.*;
 import java.time.Instant;
 import java.util.Map;
 
+/**
+
+ DTO de salida que representa la información detallada de una electiva ofertada.
+
+ <p>Se utiliza en las respuestas HTTP para mostrar información a los administradores
+
+ o usuarios que consultan las electivas ofertadas en un período determinado.</p>
+ */
 @Getter
 @Setter
 @Builder

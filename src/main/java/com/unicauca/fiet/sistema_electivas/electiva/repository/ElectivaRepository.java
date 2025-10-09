@@ -20,4 +20,5 @@ public interface ElectivaRepository extends JpaRepository<Electiva, Long> {
 
     List<Electiva> findByNombreContainingIgnoreCaseOrCodigoContainingIgnoreCase(String nombre, String codigo);
 
+
 }

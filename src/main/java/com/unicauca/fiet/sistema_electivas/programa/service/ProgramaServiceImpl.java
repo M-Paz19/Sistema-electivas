@@ -1,5 +1,8 @@
 package com.unicauca.fiet.sistema_electivas.programa.service;
 
+import com.unicauca.fiet.sistema_electivas.common.exception.InvalidStateException;
+import com.unicauca.fiet.sistema_electivas.electiva.model.Electiva;
+import com.unicauca.fiet.sistema_electivas.electiva.repository.ProgramaElectivaRepository;
 import com.unicauca.fiet.sistema_electivas.programa.dto.ProgramaDisableResponse;
 import com.unicauca.fiet.sistema_electivas.programa.dto.ProgramaRequest;
 import com.unicauca.fiet.sistema_electivas.programa.dto.ProgramaResponse;
@@ -8,8 +11,10 @@ import com.unicauca.fiet.sistema_electivas.programa.enums.EstadoPrograma;
 import com.unicauca.fiet.sistema_electivas.common.exception.BusinessException;
 import com.unicauca.fiet.sistema_electivas.common.exception.DuplicateResourceException;
 import com.unicauca.fiet.sistema_electivas.common.exception.ResourceNotFoundException;
+import com.unicauca.fiet.sistema_electivas.programa.mapper.ProgramaMapper;
 import com.unicauca.fiet.sistema_electivas.programa.model.Programa;
 import com.unicauca.fiet.sistema_electivas.programa.repository.ProgramaRepository;
+import com.unicauca.fiet.sistema_electivas.electiva.enums.EstadoElectiva;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +24,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProgramaServiceImpl implements ProgramaService {
     private final ProgramaRepository programaRepository;
+    private final ProgramaElectivaRepository programaElectivaRepository;
     /**
      * Crea un nuevo programa académico en el sistema.
      *
@@ -36,30 +42,35 @@ public class ProgramaServiceImpl implements ProgramaService {
      */
     @Override
     public ProgramaResponse crearPrograma(ProgramaRequest request) {
-        // Validar duplicados por código
+        // 1️ Validar duplicados por código
         programaRepository.findByCodigo(request.getCodigo())
-                .ifPresent(p -> { throw new DuplicateResourceException("El código " + request.getCodigo() + " ya está en uso. Por favor, utilice otro."); });
+                .ifPresent(p -> {
+                    throw new DuplicateResourceException(
+                            "El código " + request.getCodigo() + " ya está en uso. Por favor, utilice otro."
+                    );
+                });
 
-        // Validar duplicados por nombre
+        // 2️ Validar duplicados por nombre
         programaRepository.findByNombre(request.getNombre())
-                .ifPresent(p -> { throw new DuplicateResourceException("El nombre " + request.getNombre() + " ya está en uso. Por favor, utilice otro."); });
+                .ifPresent(p -> {
+                    throw new DuplicateResourceException(
+                            "El nombre " + request.getNombre() + " ya está en uso. Por favor, utilice otro."
+                    );
+                });
 
-        // Crear y configurar el programa
-        Programa programa = new Programa();
-        programa.setCodigo(request.getCodigo());
-        programa.setNombre(request.getNombre());
-        programa.setEstado(EstadoPrograma.PENDIENTE_PLAN); // Estado inicial
+        // 3️ Crear la entidad a partir del DTO usando el mapper
+        Programa programa = ProgramaMapper.toEntity(request);
 
+        // Forzar estado de creacion aquí:
+        programa.setEstado(EstadoPrograma.PENDIENTE_PLAN);
+
+        // 4️ Guardar la entidad
         Programa saved = programaRepository.save(programa);
 
-        return new ProgramaResponse(
-                saved.getId(),
-                saved.getCodigo(),
-                saved.getNombre(),
-                saved.getEstado().getDescripcion(),
-                "Programa creado exitosamente"
-        );
+        // 5️⃣ Convertir la entidad guardada a DTO de respuesta
+        return ProgramaMapper.toResponse(saved);
     }
+
     /**
      * Edita los datos de un programa existente (solo el nombre).
      *
@@ -81,21 +92,23 @@ public class ProgramaServiceImpl implements ProgramaService {
      */
     @Override
     public ProgramaResponse editarPrograma(Long id, ProgramaUpdateRequest request) {
-        // 1. Buscar el programa
+        // 1️ Buscar el programa existente
         Programa programa = programaRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Programa con id " + id + " no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Programa con id " + id + " no encontrado"
+                ));
 
-        // 2. Validar que no esté deshabilitado
+        // 2️ Validar que no esté deshabilitado
         if (programa.getEstado() == EstadoPrograma.DESHABILITADO) {
-            throw new IllegalStateException("No se puede editar un programa deshabilitado.");
+            throw new InvalidStateException("No se puede editar un programa deshabilitado.");
         }
 
-        // 3. Validar campo obligatorio
+        // 3️ Validar campo obligatorio
         if (request.getNombre() == null || request.getNombre().isBlank()) {
-            throw new IllegalArgumentException("Complete todos los campos obligatorios.");
+            throw new BusinessException("Complete todos los campos obligatorios.");
         }
 
-        // 4. Validar duplicado en nombre
+        // 4️ Validar duplicado en nombre
         programaRepository.findByNombre(request.getNombre())
                 .filter(p -> !p.getId().equals(id))
                 .ifPresent(p -> {
@@ -104,50 +117,57 @@ public class ProgramaServiceImpl implements ProgramaService {
                     );
                 });
 
-        // 5. Actualizar
-        programa.setNombre(request.getNombre());
+        // 5️ Actualizar la entidad usando el mapper
+        ProgramaMapper.updateEntity(programa, request);
+
+        // 6️ Guardar cambios
         Programa actualizado = programaRepository.save(programa);
 
-        // 6. Respuesta
-        return new ProgramaResponse(
-                actualizado.getId(),
-                actualizado.getCodigo(),
-                actualizado.getNombre(),
-                actualizado.getEstado().getDescripcion(),
-                "Programa actualizado exitosamente"
-        );
+        // 7️ Convertir a DTO de respuesta usando el mapper
+        return ProgramaMapper.toResponse(actualizado);
     }
+
     /**
      * Deshabilita un programa académico, cambiando su estado a {@link EstadoPrograma#DESHABILITADO}.
      *
      * <p>Validaciones realizadas:
      * <ul>
      *   <li>Debe existir un programa con el ID dado.</li>
-     *   <li>(Pendiente) No debe tener electivas activas asociadas.</li>
+     *   <li>No debe tener electivas activas asociadas (estado distinto a DESHABILITADA).</li>
      * </ul>
      *
      * @param id Identificador del programa a deshabilitar.
      * @return {@link ProgramaDisableResponse} con el resultado de la operación.
      * @throws ResourceNotFoundException Si el programa no existe.
-     * @throws BusinessException (comentado por ahora) Si existen electivas activas asociadas.
+     * @throws BusinessException Si existen electivas activas asociadas.
      */
     @Override
     public ProgramaDisableResponse deshabilitarPrograma(Long id) {
+        // 1️ Buscar el programa
         Programa programa = programaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Programa con id " + id + " no encontrado"));
 
-        // 🔒 Validación futura: electivas activas
-        /**int electivasActivas = electivaRepository.countByProgramaIdAndEstadoNot(id, EstadoElectiva.DESHABILITADA);
-         if (electivasActivas > 0) {
-         throw new BusinessException("No se puede deshabilitar el programa porque tiene "
-         + electivasActivas + " electivas activas asociadas. Desasócialas primero.");
-         }
-         **/
+        // 2️ Validar si ya está deshabilitado
+        if (programa.getEstado() == EstadoPrograma.DESHABILITADO) {
+            throw new InvalidStateException("El programa ya está deshabilitado.");
+        }
 
+        // 3️ Validar electivas activas asociadas
+        int electivasActivas = programaElectivaRepository.countElectivasActivasByProgramaId(id, EstadoElectiva.APROBADA);
+        if (electivasActivas > 0) {
+            throw new BusinessException("No se puede deshabilitar el programa porque tiene "
+                    + electivasActivas + " electivas activas asociadas. Desasócialas o deshabilítalas primero.");
+        }
+
+        // 4️ Deshabilitar el programa
         programa.setEstado(EstadoPrograma.DESHABILITADO);
         programaRepository.save(programa);
 
-        return new ProgramaDisableResponse(programa.getId(), programa.getNombre(), "Programa deshabilitado");
+        // 5️ Retornar respuesta
+        return new ProgramaDisableResponse(
+                programa.getId(),
+                programa.getNombre()
+        );
     }
     /**
      * Lista todos los programas académicos registrados en la base de datos.
@@ -157,7 +177,7 @@ public class ProgramaServiceImpl implements ProgramaService {
     @Override
     public List<ProgramaResponse> listarProgramas() {
         return programaRepository.findAll().stream()
-                .map(this::toResponse)
+                .map(ProgramaMapper::toResponse)
                 .toList();
     }
 
@@ -170,7 +190,7 @@ public class ProgramaServiceImpl implements ProgramaService {
     @Override
     public List<ProgramaResponse> buscarPorEstado(EstadoPrograma estado) {
         return programaRepository.findByEstado(estado).stream()
-                .map(this::toResponse)
+                .map(ProgramaMapper::toResponse)
                 .toList();
     }
 
@@ -184,7 +204,7 @@ public class ProgramaServiceImpl implements ProgramaService {
     @Override
     public List<ProgramaResponse> buscarPorNombre(String nombre) {
         return programaRepository.findByNombreContainingIgnoreCase(nombre).stream()
-                .map(this::toResponse)
+                .map(ProgramaMapper::toResponse)
                 .toList();
     }
 
@@ -198,24 +218,10 @@ public class ProgramaServiceImpl implements ProgramaService {
     @Override
     public List<ProgramaResponse> buscarPorCodigo(String codigo) {
         return programaRepository.findByCodigoContainingIgnoreCase(codigo).stream()
-                .map(this::toResponse)
+                .map(ProgramaMapper::toResponse)
                 .toList();
     }
 
-    /**
-     * Convierte una entidad {@link Programa} en un {@link ProgramaResponse}.
-     *
-     * @param programa Entidad programa a convertir.
-     * @return {@link ProgramaResponse} con la información de la entidad.
-     */
-    private ProgramaResponse toResponse(Programa programa) {
-        return new ProgramaResponse(
-                programa.getId(),
-                programa.getCodigo(),
-                programa.getNombre(),
-                programa.getEstado().getDescripcion(),
-                null // mensaje no aplica aquí
-        );
-    }
+
 
 }

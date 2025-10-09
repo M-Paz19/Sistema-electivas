@@ -3,9 +3,11 @@ package com.unicauca.fiet.sistema_electivas.electiva.mapper;
 import com.unicauca.fiet.sistema_electivas.electiva.model.Electiva;
 import com.unicauca.fiet.sistema_electivas.electiva.dto.*;
 import com.unicauca.fiet.sistema_electivas.departamento.model.Departamento;
+import com.unicauca.fiet.sistema_electivas.electiva.model.ProgramaElectiva;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Clase utilitaria encargada de transformar objetos entre las entidades del dominio
@@ -22,21 +24,28 @@ public class ElectivaMapper {
      * @param electiva entidad a convertir
      * @return DTO con los datos de la electiva y su departamento asociado
      */
-    public static ElectivaResponseDTO toResponse(Electiva electiva) {
+    public static ElectivaResponseDTO toResponse(Electiva electiva, List<ProgramaElectiva> programasAsociados) {
         if (electiva == null) return null;
+
+        // Mapear los programas asociados desde la tabla intermedia ProgramaElectiva
+        List<ProgramaSimpleDTO> programas = programasAsociados != null
+                ? programasAsociados.stream()
+                .map(pe -> ProgramaSimpleDTO.builder()
+                        .id(pe.getPrograma().getId())
+                        .nombre(pe.getPrograma().getNombre())
+                        .build())
+                .collect(Collectors.toList())
+                : List.of();
 
         return ElectivaResponseDTO.builder()
                 .id(electiva.getId())
                 .codigo(electiva.getCodigo())
                 .nombre(electiva.getNombre())
                 .descripcion(electiva.getDescripcion())
-                .estado(electiva.getEstado().name()) // Se usa el nombre del enum (BORRADOR, APROBADA, INACTIVA)
-                .departamentoId(
-                        electiva.getDepartamento() != null ? electiva.getDepartamento().getId() : null
-                )
-                .departamentoNombre(
-                        electiva.getDepartamento() != null ? electiva.getDepartamento().getNombre() : null
-                )
+                .estado(electiva.getEstado().name())
+                .departamentoId(electiva.getDepartamento() != null ? electiva.getDepartamento().getId() : null)
+                .departamentoNombre(electiva.getDepartamento() != null ? electiva.getDepartamento().getNombre() : null)
+                .programas(programas)
                 .build();
     }
 

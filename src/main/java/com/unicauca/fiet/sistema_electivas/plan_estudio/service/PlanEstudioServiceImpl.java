@@ -4,6 +4,7 @@ package com.unicauca.fiet.sistema_electivas.plan_estudio.service;
 
 import com.unicauca.fiet.sistema_electivas.plan_estudio.dto.*;
 import com.unicauca.fiet.sistema_electivas.plan_estudio.enums.EstadoPlanEstudio;
+import com.unicauca.fiet.sistema_electivas.plan_estudio.mapper.PlanEstudioMapper;
 import com.unicauca.fiet.sistema_electivas.programa.enums.EstadoPrograma;
 import com.unicauca.fiet.sistema_electivas.common.exception.BusinessException;
 import com.unicauca.fiet.sistema_electivas.common.exception.InvalidStateException;
@@ -21,9 +22,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -56,73 +57,29 @@ public class PlanEstudioServiceImpl implements PlanEstudioService {
                 });
 
         // Validar versión numérica
-        Integer version;
         try {
-            version = Integer.parseInt(request.getVersion());
+            Integer.parseInt(request.getVersion());
         } catch (NumberFormatException e) {
             throw new BusinessException("El id del pensum debe ser un número entero (ejemplo: 544).");
         }
-        // Validar fechas de vigencia
-        LocalDate vigenciaInicio = request.getVigenciaInicio();
-        LocalDate vigenciaFin = request.getVigenciaFin();
-
-        if (vigenciaInicio == null) {
-            throw new BusinessException("Debe especificar la fecha de inicio de vigencia del plan de estudios.");
+        // Validar año de inicio
+        Integer anio = request.getAnioInicio();
+        if (anio == null || anio < 1900 || anio > 3000) {
+            throw new BusinessException("Debe especificar un año de inicio válido (entre 1900 y 3000).");
+        }
+        // Validar que no haya otro plan en el mismo año
+        if (planEstudioRepository.existsByProgramaAndAnioInicio(programa, request.getAnioInicio())) {
+            throw new BusinessException(
+                    "Ya existe un plan de estudio para el año " + request.getAnioInicio() + " en este programa."
+            );
         }
 
-        if (vigenciaFin != null && vigenciaFin.isBefore(vigenciaInicio)) {
-            throw new BusinessException("La fecha de fin de vigencia no puede ser anterior a la fecha de inicio.");
-        }
-
-        // 🔍 Validar solapamiento solo con planes activos o en configuración
-        List<PlanEstudio> planesExistentes = planEstudioRepository.findByPrograma(programa)
-                .stream()
-                .filter(p -> p.getEstado() == EstadoPlanEstudio.CONFIGURACION_PENDIENTE
-                        || p.getEstado() == EstadoPlanEstudio.ACTIVO)
-                .collect(Collectors.toList());
-
-        for (PlanEstudio existente : planesExistentes) {
-            LocalDate inicioExistente = existente.getVigenciaInicio();
-            LocalDate finExistente = existente.getVigenciaFin();
-
-            // Caso: el existente no tiene fecha fin → el administrador debe cerrarlo
-            if (finExistente == null) {
-                throw new BusinessException("El programa ya tiene un plan activo (" + existente.getNombre() +
-                        ") sin fecha de fin. Debe cerrarlo antes de crear uno nuevo.");
-            }
-
-            // Caso: el nuevo rango se solapa con uno existente
-            boolean seSolapan =
-                    !(vigenciaFin != null && vigenciaFin.isBefore(inicioExistente)) && // nuevo termina antes del existente
-                            !(vigenciaInicio.isAfter(finExistente)); // nuevo empieza después del existente
-
-            if (seSolapan) {
-                throw new BusinessException("El rango de vigencia ingresado se solapa con el plan existente: " +
-                        existente.getNombre() + " (" + inicioExistente + " a " +
-                        (finExistente != null ? finExistente : "actualidad") + ").");
-            }
-        }
-        // Crear plan en estado pendiente de configuración
-        PlanEstudio plan = new PlanEstudio();
-        plan.setNombre(request.getNombre());
-        plan.setVersion(version.toString());
-        plan.setEstado(EstadoPlanEstudio.CONFIGURACION_PENDIENTE);
-        plan.setPrograma(programa);
-        plan.setVigenciaInicio(vigenciaInicio);
-        plan.setVigenciaFin(vigenciaFin);
-
+        // Crear entidad desde el DTO usando el mapper
+        PlanEstudio plan = PlanEstudioMapper.toEntity(request, programa);
         PlanEstudio saved = planEstudioRepository.save(plan);
 
-        return new PlanEstudioResponse(
-                saved.getId(),
-                saved.getNombre(),
-                saved.getVersion(),
-                saved.getEstado().name(),
-                saved.getVigenciaInicio(),
-                saved.getVigenciaFin(),
-                programa.getId(),
-                "Plan de estudio creado exitosamente en estado CONFIGURACION_PENDIENTE"
-        );
+        // Retornar respuesta con mensaje
+        return PlanEstudioMapper.toResponse(saved);
     }
 
 
@@ -141,20 +98,7 @@ public class PlanEstudioServiceImpl implements PlanEstudioService {
                 : planEstudioRepository.findByProgramaAndEstado(programa, estado);
 
         return planes.stream()
-                .map(plan -> new PlanEstudioListResponse(
-                        plan.getId(),
-                        plan.getNombre(),
-                        plan.getVersion(),
-                        plan.getEstado().getDescripcion(),
-                        plan.getVigenciaInicio(),
-                        plan.getVigenciaFin(),
-                        programa.getId(),
-                        plan.getElectivasPorSemestre(),
-                        plan.getReglasNivelacion(),
-                        plan.getElectivasRequeridas(),
-                        plan.getCreditosTotalesPlan(),
-                        plan.getCreditosTrabajoGrado()
-                ))
+                .map(PlanEstudioMapper::toListResponse) // ✅ uso directo del mapper
                 .collect(Collectors.toList());
     }
 
@@ -179,17 +123,19 @@ public class PlanEstudioServiceImpl implements PlanEstudioService {
 
         EstadoPlanEstudio estadoActual = plan.getEstado();
 
-        // Validaciones de fecha
-        LocalDate vigenciaInicio = request.getVigenciaInicio();
-        LocalDate vigenciaFin = request.getVigenciaFin();
+        //  Validar año de inicio
+        Integer nuevoAnio = request.getAnioInicio();
+        if (nuevoAnio == null) {
+            throw new BusinessException("Debe especificar el año de inicio del plan de estudios.");
+        }
 
-        if (vigenciaFin != null && vigenciaInicio != null && vigenciaFin.isBefore(vigenciaInicio)) {
-            throw new BusinessException("La fecha de fin de vigencia no puede ser anterior a la de inicio.");
+        if (nuevoAnio < 1900 || nuevoAnio > 3000) {
+            throw new BusinessException("El año de inicio debe estar entre 1900 y 3000.");
         }
 
         switch (estadoActual) {
             case CONFIGURACION_PENDIENTE:
-                // Validar nombre único dentro del programa (si cambió)
+                //  Validar nombre único dentro del programa (si cambió)
                 if (!plan.getNombre().equals(request.getNombre())) {
                     planEstudioRepository.findByNombreAndPrograma(request.getNombre(), programa)
                             .ifPresent(p -> {
@@ -199,7 +145,7 @@ public class PlanEstudioServiceImpl implements PlanEstudioService {
                     plan.setNombre(request.getNombre());
                 }
 
-                // Validar versión numérica si cambió
+                //  Validar versión numérica (si cambió)
                 if (!plan.getVersion().equals(request.getVersion())) {
                     try {
                         Integer.parseInt(request.getVersion());
@@ -209,73 +155,32 @@ public class PlanEstudioServiceImpl implements PlanEstudioService {
                     plan.setVersion(request.getVersion());
                 }
 
-                // Fechas
-                if (vigenciaInicio == null) {
-                    throw new BusinessException("Debe especificar la fecha de inicio de vigencia del plan.");
+                // 🔍 Validar que no exista otro plan del mismo año
+                boolean existePlanMismoAnio = planEstudioRepository
+                        .existsByProgramaAndAnioInicio(programa, nuevoAnio);
+
+                if (existePlanMismoAnio && !Objects.equals(plan.getAnioInicio(), nuevoAnio)) {
+                    throw new BusinessException("Ya existe un plan de estudio en este programa con el año " + nuevoAnio + ".");
                 }
-                // 🔍 Validar solapamiento solo con planes activos o en configuración
-                List<PlanEstudio> planesExistentes = planEstudioRepository.findByPrograma(programa)
-                        .stream()
-                        // 🔍 Excluir el mismo plan que se está actualizando
-                        .filter(p -> !p.getId().equals(plan.getId()))
-                        // Solo considerar los estados relevantes
-                        .filter(p -> p.getEstado() == EstadoPlanEstudio.CONFIGURACION_PENDIENTE
-                                || p.getEstado() == EstadoPlanEstudio.ACTIVO)
-                        .collect(Collectors.toList());
 
-                for (PlanEstudio existente : planesExistentes) {
-                    LocalDate inicioExistente = existente.getVigenciaInicio();
-                    LocalDate finExistente = existente.getVigenciaFin();
-
-                    // Caso: el existente no tiene fecha fin → el administrador debe cerrarlo
-                    if (finExistente == null) {
-                        throw new BusinessException("El programa ya tiene un plan activo (" + existente.getNombre() +
-                                ") sin fecha de fin. Debe cerrarlo antes de crear uno nuevo.");
-                    }
-
-                    // Caso: el nuevo rango se solapa con uno existente
-                    boolean seSolapan =
-                            !(vigenciaFin != null && vigenciaFin.isBefore(inicioExistente)) && // nuevo termina antes del existente
-                                    !(vigenciaInicio.isAfter(finExistente)); // nuevo empieza después del existente
-
-                    if (seSolapan) {
-                        throw new BusinessException("El rango de vigencia ingresado se solapa con el plan existente: " +
-                                existente.getNombre() + " (" + inicioExistente + " a " +
-                                (finExistente != null ? finExistente : "actualidad") + ").");
-                    }
-                }
-                plan.setVigenciaInicio(vigenciaInicio);
-                plan.setVigenciaFin(vigenciaFin);
+                // Actualizar año
+                plan.setAnioInicio(nuevoAnio);
                 break;
 
             case ACTIVO:
-                // Solo se permite editar la fecha de fin
-                if (vigenciaFin == null) {
-                    throw new BusinessException("Debe indicar la fecha de finalización del plan activo.");
-                }
-                if (vigenciaFin.isBefore(plan.getVigenciaInicio())) {
-                    throw new BusinessException("La fecha de fin no puede ser anterior a la de inicio del plan.");
-                }
-                plan.setVigenciaFin(vigenciaFin);
-                break;
+                // No se permite cambiar nombre, versión ni año en un plan activo
+                throw new BusinessException("No se permite editar un plan activo. Solo se pueden cerrar o desactivar.");
 
             default:
                 throw new BusinessException("El plan en estado " + estadoActual +
-                        " no puede ser modificado. Solo se permiten ediciones en CONFIGURACION_PENDIENTE o ACTIVO.");
+                        " no puede ser modificado. Solo se permiten ediciones en CONFIGURACION_PENDIENTE.");
         }
 
         PlanEstudio actualizado = planEstudioRepository.save(plan);
 
-        return new PlanEstudioResponse(
-                actualizado.getId(),
-                actualizado.getNombre(),
-                actualizado.getVersion(),
-                actualizado.getEstado().name(),
-                actualizado.getVigenciaInicio(),
-                actualizado.getVigenciaFin(),
-                programa.getId(),
-                "Plan de estudio actualizado correctamente."
-        );
+        // Usamos el mapper para crear la respuesta
+
+        return PlanEstudioMapper.toResponse(actualizado);
     }
     /**
      * {@inheritDoc}
@@ -300,24 +205,12 @@ public class PlanEstudioServiceImpl implements PlanEstudioService {
         }
 
         // Asignar vigencia fin si no tiene
-        if (plan.getVigenciaFin() == null) {
-            plan.setVigenciaFin(LocalDate.now());
-        }
-
         plan.setEstado(EstadoPlanEstudio.INACTIVO);
+
         planEstudioRepository.save(plan);
 
-        return new PlanEstudioResponse(
-                plan.getId(),
-                plan.getNombre(),
-                plan.getVersion(),
-                plan.getEstado().name(),
-                plan.getVigenciaInicio(),
-                plan.getVigenciaFin(),
-                plan.getId(),
-                "Plan de estudio deshabilitado correctamente."
-        );
-
+        //  Usar el mapper para generar la respuesta
+        return PlanEstudioMapper.toResponse(plan);
     }
 
     /**
@@ -387,13 +280,11 @@ public class PlanEstudioServiceImpl implements PlanEstudioService {
                     + "Encontrado: " + creditosTrabajoGradoMaterias + " vs esperado: " + configuracion.getCreditosTrabajoGrado());
         }
         // 6. Configurar plan (nuevo paso)
-        configurarPlan(plan,
-                configuracion.getElectivasPorSemestreJson(),
-                configuracion.getReglasNivelacionJson(),
-                configuracion.getElectivasRequeridas(),
-                configuracion.getCreditosTrabajoGrado(),
-                configuracion.getCreditosTotalesPlan());
 
+        validarElectivasPorSemestre(configuracion.getElectivasPorSemestreJson());
+        validarReglasNivelacion(configuracion.getReglasNivelacionJson());
+        // Usa el mapper para actualizar el plan desde el DTO
+        PlanEstudioMapper.updateFromConfiguracion(plan, configuracion);
         // 7. Persistir materias y actualizar estado
         planMateriaRepository.saveAll(materias);
         plan.setEstado(EstadoPlanEstudio.ACTIVO);
@@ -480,31 +371,6 @@ public class PlanEstudioServiceImpl implements PlanEstudioService {
             }
         }
     }
-    private void configurarPlan(PlanEstudio plan,
-                                Map<String, Object> electivasPorSemestre,
-                                Map<String, Object> reglasNivelacion,
-                                int electivasRequeridas,
-                                int creditosTrabajoGrado,
-                                int creditosTotalesPlan) {
 
-        validarElectivasPorSemestre(electivasPorSemestre);
-        validarReglasNivelacion(reglasNivelacion);
-
-        if (electivasRequeridas <= 0) {
-            throw new BusinessException("El número total de electivas debe ser mayor a 0.");
-        }
-        if (creditosTotalesPlan <= 0) {
-            throw new BusinessException("El total de créditos del plan debe ser mayor a 0.");
-        }
-        if (creditosTrabajoGrado <= 0) {
-            throw new BusinessException("Los créditos del trabajo de grado deben ser mayor a 0.");
-        }
-
-        plan.setElectivasPorSemestre(electivasPorSemestre);
-        plan.setReglasNivelacion(reglasNivelacion);
-        plan.setElectivasRequeridas(electivasRequeridas);
-        plan.setCreditosTotalesPlan(creditosTotalesPlan);
-        plan.setCreditosTrabajoGrado(creditosTrabajoGrado);
-    }
 
 }

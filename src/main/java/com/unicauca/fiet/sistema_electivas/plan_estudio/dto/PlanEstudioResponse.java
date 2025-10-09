@@ -17,8 +17,6 @@ public class PlanEstudioResponse {
     private String nombre;
     private String version;
     private String estado;
-    private LocalDate vigenciaInicio;
-    private LocalDate vigenciaFin;
+    private Integer anioInicio;
     private Long programaId;
-    private String mensaje;
 }

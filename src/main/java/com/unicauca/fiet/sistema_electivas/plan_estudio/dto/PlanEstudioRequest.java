@@ -25,21 +25,6 @@ public class PlanEstudioRequest {
     private String version;
 
     @NotNull(message = "La fecha de inicio de vigencia del plan es obligatoria")
-    private LocalDate vigenciaInicio;
+    private Integer anioInicio;
 
-    private LocalDate vigenciaFin;
-
-    private Map<String, Object> reglasNivelacion;
-
-
-    private Map<String, Object> electivasPorSemestre;
-
-
-    private Integer electivasRequeridas;
-
-
-    private Integer creditosTotalesPlan;
-
-
-    private Integer creditosTrabajoGrado;
 }

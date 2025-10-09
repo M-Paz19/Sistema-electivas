@@ -15,6 +15,5 @@ import lombok.Setter;
 public class ProgramaDisableResponse {
     private Long id;
     private String nombre;
-    private String mensaje;
 }
 

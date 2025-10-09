@@ -2,6 +2,8 @@ package com.unicauca.fiet.sistema_electivas.electiva.dto;
 
 import lombok.*;
 
+import java.util.List;
+
 /**
  * Representa la respuesta enviada al cliente tras crear o consultar una electiva.
  * 
@@ -20,4 +22,6 @@ public class ElectivaResponseDTO {
     private String estado;
     private Long departamentoId;
     private String departamentoNombre;
+
+    private List<ProgramaSimpleDTO> programas;
 }
