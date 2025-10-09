@@ -1,5 +1,7 @@
 package com.unicauca.fiet.sistema_electivas.departamento.service;
 
+import com.unicauca.fiet.sistema_electivas.common.exception.BusinessException;
+import com.unicauca.fiet.sistema_electivas.common.exception.DuplicateResourceException;
 import com.unicauca.fiet.sistema_electivas.common.exception.InvalidStateException;
 import com.unicauca.fiet.sistema_electivas.common.exception.ResourceNotFoundException;
 import com.unicauca.fiet.sistema_electivas.departamento.dto.DepartamentoRequestDTO;
@@ -33,16 +35,16 @@ public class DepartamentoServiceImpl implements DepartamentoService {
         // 🔹 Validaciones básicas
         if (dto.getCodigo() == null || dto.getCodigo().isBlank() ||
                 dto.getNombre() == null || dto.getNombre().isBlank()) {
-            throw new IllegalArgumentException("Complete todos los campos obligatorios.");
+            throw new BusinessException("Complete todos los campos obligatorios.");
         }
 
         // 🔹 Validar duplicados
         if (departamentoRepository.findByCodigo(dto.getCodigo()).isPresent()) {
-            throw new IllegalArgumentException("El código '" + dto.getCodigo() + "' ya está en uso. Por favor, utilice otro.");
+            throw new DuplicateResourceException("El código '" + dto.getCodigo() + "' ya está en uso. Por favor, utilice otro.");
         }
 
         if (departamentoRepository.findByNombre(dto.getNombre()).isPresent()) {
-            throw new IllegalArgumentException("El nombre '" + dto.getNombre() + "' ya está en uso. Por favor, utilice otro.");
+            throw new DuplicateResourceException("El nombre '" + dto.getNombre() + "' ya está en uso. Por favor, utilice otro.");
         }
 
         // 🔹 Convertir el DTO a entidad usando el Mapper
@@ -74,19 +76,19 @@ public class DepartamentoServiceImpl implements DepartamentoService {
         // 🔹 Validar campos requeridos
         if (dto.getCodigo() == null || dto.getCodigo().isBlank() ||
                 dto.getNombre() == null || dto.getNombre().isBlank()) {
-            throw new IllegalArgumentException("Complete todos los campos obligatorios.");
+            throw new BusinessException("Complete todos los campos obligatorios.");
         }
 
         // 🔹 Validar duplicados (código y nombre en uso por otro departamento)
         departamentoRepository.findByCodigo(dto.getCodigo()).ifPresent(d -> {
             if (!d.getId().equals(id)) {
-                throw new IllegalArgumentException("El código '" + dto.getCodigo() + "' ya está en uso por otro departamento.");
+                throw new DuplicateResourceException("El código '" + dto.getCodigo() + "' ya está en uso por otro departamento.");
             }
         });
 
         departamentoRepository.findByNombre(dto.getNombre()).ifPresent(d -> {
             if (!d.getId().equals(id)) {
-                throw new IllegalArgumentException("El nombre '" + dto.getNombre() + "' ya está en uso por otro departamento.");
+                throw new DuplicateResourceException("El nombre '" + dto.getNombre() + "' ya está en uso por otro departamento.");
             }
         });
 
