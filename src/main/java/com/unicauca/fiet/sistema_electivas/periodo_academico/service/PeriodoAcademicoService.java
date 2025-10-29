@@ -3,17 +3,11 @@ package com.unicauca.fiet.sistema_electivas.periodo_academico.service;
 
 
 import com.unicauca.fiet.sistema_electivas.common.exception.BusinessException;
-import com.unicauca.fiet.sistema_electivas.electiva.enums.EstadoElectiva;
-import com.unicauca.fiet.sistema_electivas.periodo_academico.dto.AgregarElectivaOfertadaDTO;
-import com.unicauca.fiet.sistema_electivas.periodo_academico.dto.CrearPeriodoAcademicoDTO;
-import com.unicauca.fiet.sistema_electivas.periodo_academico.dto.ElectivaOfertadaResponse;
-import com.unicauca.fiet.sistema_electivas.periodo_academico.dto.PeriodoAcademicoResponse;
-import com.unicauca.fiet.sistema_electivas.periodo_academico.enums.EstadoElectivaOfertada;
+import com.unicauca.fiet.sistema_electivas.periodo_academico.dto.*;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.enums.EstadoPeriodoAcademico;
 import com.unicauca.fiet.sistema_electivas.common.exception.DuplicateResourceException;
 import com.unicauca.fiet.sistema_electivas.common.exception.InvalidStateException;
 import com.unicauca.fiet.sistema_electivas.common.exception.ResourceNotFoundException;
-import com.unicauca.fiet.sistema_electivas.periodo_academico.model.ElectivaOfertada;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.model.PeriodoAcademico;
 
 import java.util.List;
@@ -49,37 +43,28 @@ public interface PeriodoAcademicoService {
      * @throws IllegalArgumentException si las fechas o el formato del semestre son inválidos.
      */
     PeriodoAcademicoResponse crearPeriodo(CrearPeriodoAcademicoDTO dto);
+
     /**
-     * Agrega una nueva electiva a la oferta académica de un período específico.
+     * Abre un período académico, cambiando su estado de {@code CONFIGURACION} a {@code ABIERTO},
+     * siempre que cumpla las condiciones establecidas.
      *
-     * <p>Validaciones:
+     * <p>Validaciones realizadas:</p>
      * <ul>
-     *   <li>El período debe existir y estar en estado {@link EstadoPeriodoAcademico#CONFIGURACION}.</li>
-     *   <li>La electiva debe existir y estar en estado aprobado ({@link EstadoElectiva#APROBADA}).</li>
-     *   <li>No debe existir previamente una oferta de la misma electiva en este período.</li>
-     *   <li>Se validan los cupos por programa, asegurando que coincidan con los programas asociados a la electiva y que la suma total sea 18.</li>
+     *   <li>Debe existir al menos una {@code Oferta} asociada en estado {@code OFERTADA}.</li>
+     *   <li>No debe existir otro período en estado {@code ABIERTO} o {@code EN_ASIGNACION}.</li>
+     *   <li>Si la fecha actual es anterior a la {@code fechaApertura}, solo se permite abrirlo si {@code forzarApertura} es {@code true}.</li>
      * </ul>
      *
-     * <p>El método crea un registro {@link ElectivaOfertada} vinculado al período y la electiva seleccionada,
-     * copia la configuración de programas y cupos de la plantilla, y establece su estado inicial en {@link EstadoElectivaOfertada#OFERTADA}.</p>
+     * <p>Al abrir el período, se genera (o habilita) el formulario de preinscripción y
+     * se bloquean las opciones de edición de configuración.</p>
      *
-     * <p>HU1.4.2 - Configurar la oferta académica de un período:</p>
-     * <ul>
-     *   <li>Escenario 1: Agregar electiva exitosamente → Se crea la oferta y se retorna la información detallada.</li>
-     *   <li>Escenario 2: Electiva ya existe en la oferta → Lanza excepción con mensaje de advertencia.</li>
-     *   <li>Escenario 3: Solo electivas aprobadas aparecen en el buscador → Controlado por filtro de estado en la búsqueda.</li>
-     *   <li>Escenario 4: Período no editable → Lanza excepción si el período no está en estado CONFIGURACION.</li>
-     * </ul>
-     *
-     * @param periodoId ID del período académico donde se agregará la electiva.
-     * @param dto DTO con la información de la electiva a ofertar y los cupos por programa.
-     * @return {@link ElectivaOfertadaResponse} con la información detallada de la electiva ofertada.
-     * @throws ResourceNotFoundException si no se encuentra el período o la electiva.
-     * @throws InvalidStateException si el período no está en estado CONFIGURACION.
-     * @throws BusinessException si la electiva no está aprobada o ya existe en la oferta.
-     * @throws IllegalArgumentException si los cupos son inválidos o no coinciden con los programas asociados.
+     * @param periodoId ID del período académico a abrir
+     * @param forzarApertura indica si se debe permitir la apertura antes de la fecha programada
+     * @return {@link CambioEstadoResponse} con el nuevo estado y mensaje de confirmación
+     * @throws ResourceNotFoundException si no existe el período con el ID indicado
+     * @throws BusinessException si no se cumplen las condiciones para la apertura
      */
-    ElectivaOfertadaResponse agregarElectivaOfertada(Long periodoId, AgregarElectivaOfertadaDTO dto);
+    CambioEstadoResponse abrirPeriodo(Long periodoId, boolean forzarApertura, Integer numeroOpcionesFormulario);
     /**
      * Obtiene una lista de períodos académicos con información resumida para la tabla.
      *
@@ -88,12 +73,23 @@ public interface PeriodoAcademicoService {
      * @return Lista de DTOs {@link PeriodoAcademicoResponse} con detalles y cantidad de electivas
      */
     List<PeriodoAcademicoResponse> listarPeriodos(String semestreTexto, EstadoPeriodoAcademico estado);
+
     /**
-     * Lista todas las electivas ofertadas pertenecientes a un período académico.
+     * Cierra el formulario de preinscripción asociado a un período académico.
      *
-     * @param periodoId ID del período académico
-     * @return Lista de {@link ElectivaOfertadaResponse} con información resumida
-     * @throws ResourceNotFoundException si no existe el período académico
+     * <p>Acciones realizadas:
+     * <ul>
+     *   <li>Verifica que el período esté en estado {@code ABIERTO} antes de cerrarlo.</li>
+     *   <li>Cambia el estado a {@code EN_PROCESO_ASIGNACION} y guarda el cambio.</li>
+     *   <li>Extrae el {@code formId} desde la URL del formulario de Google asociada al período.</li>
+     *   <li>Obtiene automáticamente las respuestas del formulario mediante la API de Google Forms.</li>
+     *   <li>Si no existe una URL configurada, cambia el estado a {@code CONFIGURACION} y lanza excepción.</li>
+     * </ul>
+     *
+     * @param periodoId ID del período académico a cerrar.
+     * @return El objeto {@link PeriodoAcademico} actualizado con el nuevo estado.
+     * @throws InvalidStateException Si el período no está en estado ABIERTO o no tiene un formulario asociado.
+     * @throws RuntimeException Si ocurre un error durante el cierre o la obtención de respuestas.
      */
-    public List<ElectivaOfertadaResponse> listarElectivasPorPeriodo(Long periodoId);
+    CambioEstadoResponse cerrarFormulario(Long periodoId);
 }

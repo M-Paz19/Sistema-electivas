@@ -1,6 +1,6 @@
 package com.unicauca.fiet.sistema_electivas.periodo_academico.dto;
 
-import com.unicauca.fiet.sistema_electivas.periodo_academico.enums.EstadoElectivaOfertada;
+import com.unicauca.fiet.sistema_electivas.periodo_academico.enums.EstadoOferta;
 import lombok.*;
 
 import java.time.Instant;
@@ -19,7 +19,7 @@ import java.util.Map;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ElectivaOfertadaResponse {
+public class OfertaResponse {
 
     private Long id;
     private Long electivaId;
@@ -29,7 +29,7 @@ public class ElectivaOfertadaResponse {
     private Long periodoId;
     private String nombrePeriodo;
 
-    private EstadoElectivaOfertada estado;
+    private EstadoOferta estado;
     private Map<Long, Integer> cuposPorPrograma;
 
     private Instant fechaCreacion;

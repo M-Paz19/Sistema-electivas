@@ -1,12 +1,11 @@
 package com.unicauca.fiet.sistema_electivas.periodo_academico.model;
 
-import com.unicauca.fiet.sistema_electivas.periodo_academico.enums.EstadoElectivaOfertada;
+import com.unicauca.fiet.sistema_electivas.periodo_academico.enums.EstadoOferta;
 import com.unicauca.fiet.sistema_electivas.electiva.model.Electiva;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -16,8 +15,8 @@ import java.util.Map;
 @Getter
 @Setter
 @Entity
-@Table(name = "electiva_ofertada")
-public class ElectivaOfertada {
+@Table(name = "oferta")
+public class Oferta {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "electiva_ofertada_seq")
     @SequenceGenerator(name = "electiva_ofertada_seq", sequenceName = "electiva_ofertada_seq", allocationSize = 1)
@@ -42,7 +41,7 @@ public class ElectivaOfertada {
     @NotNull
     @Column(name = "estado", nullable = false, length = Integer.MAX_VALUE)
     @Enumerated(EnumType.STRING)
-    private EstadoElectivaOfertada estado;
+    private EstadoOferta estado;
 
     @NotNull
     @Column(name = "fecha_creacion", nullable = false)

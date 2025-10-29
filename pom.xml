@@ -85,6 +85,43 @@
 			<artifactId>poi-ooxml</artifactId>
 			<version>5.4.1</version>
 		</dependency>
+		<!-- Cliente HTTP de Google -->
+		<dependency>
+			<groupId>com.google.http-client</groupId>
+			<artifactId>google-http-client-jackson2</artifactId>
+			<version>1.43.3</version>
+		</dependency>
+
+
+		<!-- Google Forms API -->
+		<dependency>
+			<groupId>com.google.apis</groupId>
+			<artifactId>google-api-services-forms</artifactId>
+			<version>v1-rev20250422-2.0.0</version>
+		</dependency>
+
+		<!-- Google API Client Jackson2 -->
+		<dependency>
+			<groupId>com.google.api-client</groupId>
+			<artifactId>google-api-client-jackson2</artifactId>
+			<version>1.28.1</version>
+		</dependency>
+
+		<!-- Google Auth Library for OAuth2 HTTP (Service Account) -->
+		<dependency>
+			<groupId>com.google.auth</groupId>
+			<artifactId>google-auth-library-oauth2-http</artifactId>
+			<version>1.5.3</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.google.oauth-client</groupId>
+			<artifactId>google-oauth-client-jetty</artifactId>
+			<version>1.34.1</version>
+		</dependency>
+
+
+
 	</dependencies>
 
 	<build>

@@ -1,6 +1,7 @@
-package com.unicauca.fiet.sistema_electivas.model;
+package com.unicauca.fiet.sistema_electivas.asignacion.model;
 
-import com.unicauca.fiet.sistema_electivas.periodo_academico.model.ElectivaOfertada;
+import com.unicauca.fiet.sistema_electivas.archivo.model.CargaArchivo;
+import com.unicauca.fiet.sistema_electivas.periodo_academico.model.Oferta;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -21,8 +22,8 @@ public class AsignacionElectiva {
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "electiva_ofertada_id", nullable = false)
-    private ElectivaOfertada electivaOfertada;
+    @JoinColumn(name = "oferta_id", nullable = false)
+    private Oferta oferta;
 
     @NotNull
     @Column(name = "estudiante_codigo", nullable = false, length = Integer.MAX_VALUE)

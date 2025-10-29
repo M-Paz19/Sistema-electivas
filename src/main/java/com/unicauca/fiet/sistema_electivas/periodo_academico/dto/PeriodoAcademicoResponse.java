@@ -25,4 +25,7 @@ public class PeriodoAcademicoResponse {
     private Instant fechaApertura;
     private Instant fechaCierre;
     private String estado;
+    private Integer numeroOpcionesFormulario;
+    private String urlFormulario;
+
 }

@@ -1,22 +1,24 @@
 package com.unicauca.fiet.sistema_electivas.periodo_academico.controller;
 
+
 import com.unicauca.fiet.sistema_electivas.common.exception.BusinessException;
 import com.unicauca.fiet.sistema_electivas.common.exception.DuplicateResourceException;
+
 import com.unicauca.fiet.sistema_electivas.common.exception.InvalidStateException;
 import com.unicauca.fiet.sistema_electivas.common.exception.ResourceNotFoundException;
-import com.unicauca.fiet.sistema_electivas.periodo_academico.dto.AgregarElectivaOfertadaDTO;
-import com.unicauca.fiet.sistema_electivas.periodo_academico.dto.CrearPeriodoAcademicoDTO;
-import com.unicauca.fiet.sistema_electivas.periodo_academico.dto.ElectivaOfertadaResponse;
-import com.unicauca.fiet.sistema_electivas.periodo_academico.dto.PeriodoAcademicoResponse;
+import com.unicauca.fiet.sistema_electivas.periodo_academico.dto.*;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.enums.EstadoPeriodoAcademico;
+import com.unicauca.fiet.sistema_electivas.periodo_academico.model.PeriodoAcademico;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.service.PeriodoAcademicoService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 
 @RestController
 @RequestMapping("/api/periodos-academicos")
@@ -43,30 +45,29 @@ public class PeriodoAcademicoController {
         PeriodoAcademicoResponse creado = periodoService.crearPeriodo(dto);
         return ResponseEntity.ok(creado);
     }
-
     /**
-     * Agrega una electiva aprobada a la oferta académica de un período en estado CONFIGURACION.
+     * Abre un período académico existente, cambiando su estado de CONFIGURACION a ABIERTO.
      *
-     * <p>Valida que el período exista y sea editable, que la electiva esté aprobada,
-     * que no haya duplicados, y ajusta los cupos por programa.</p>
+     * <p>Solo puede abrirse si cumple las condiciones definidas en {@link PeriodoAcademicoService#abrirPeriodo}.
+     * Si la fecha actual es anterior a la fecha de apertura, se requiere {@code forzarApertura = true}.</p>
      *
-     * @param periodoId ID del período académico
-     * @param dto DTO con la electiva y los cupos por programa (opcional)
-     * @return Detalle de la electiva ofertada creada
-     * @throws ResourceNotFoundException si el período o la electiva no existen
-     * @throws InvalidStateException si el período no está en estado CONFIGURACION
-     * @throws BusinessException si la electiva no está aprobada o ya existe en este periodo
-     * @throws IllegalArgumentException si los cupos son inválidos
+     * @param periodoId ID del período académico a abrir
+     * @param request Datos de apertura, incluyendo el indicador de forzar apertura y el número de opciones del formulario
+     * @return {@link CambioEstadoResponse} con el nuevo estado del período y mensaje de confirmación
+     * @throws ResourceNotFoundException si no existe el período con el ID indicado
+     * @throws BusinessException si no cumple las condiciones para ser abierto
      */
-    @PostMapping("/periodos/{periodoId}/electivas")
-    public ResponseEntity<ElectivaOfertadaResponse> agregarElectivaOfertada(
+    @PostMapping("/{periodoId}/abrir")
+    public ResponseEntity<CambioEstadoResponse> abrirPeriodo(
             @PathVariable Long periodoId,
-            @Validated @RequestBody AgregarElectivaOfertadaDTO dto) {
-
-        ElectivaOfertadaResponse response = periodoService.agregarElectivaOfertada(periodoId, dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            @Valid @RequestBody AbrirPeriodoRequest request) {
+        CambioEstadoResponse response = periodoService.abrirPeriodo(
+                periodoId,
+                request.isForzarApertura(),
+                request.getNumeroOpcionesFormulario()
+        );
+        return ResponseEntity.ok(response);
     }
-
     /**
      * Obtiene la lista de períodos académicos, con opción de filtrar por semestre o estado.
      *
@@ -86,15 +87,22 @@ public class PeriodoAcademicoController {
     }
 
     /**
-     * Obtiene todas las electivas ofertadas de un período académico específico.
+     * Cierra el formulario de preinscripción asociado a un período académico.
      *
-     * @param periodoId ID del período académico
-     * @return Lista de electivas ofertadas asociadas a ese período
+     * <p>Este proceso marca el fin de la etapa de recolección de respuestas y cambia el estado
+     * del período a {@link EstadoPeriodoAcademico#EN_PROCESO_ASIGNACION}.
+     * El sistema intenta obtener automáticamente las respuestas desde Google Forms,
+     * usando la URL configurada para ese período.</p>
+     *
+     * @param periodoId ID del período académico a cerrar
+     * @return Mensaje de confirmación con el nuevo estado del período
+     * @throws InvalidStateException si el período no está en estado ABIERTO o no tiene formulario asociado
+     * @throws RuntimeException si ocurre un error durante el cierre o la obtención de respuestas
      */
-    @GetMapping("/{periodoId}/electivas")
-    public ResponseEntity<List<ElectivaOfertadaResponse>> listarElectivasPorPeriodo(@PathVariable Long periodoId) {
-        List<ElectivaOfertadaResponse> electivas = periodoService.listarElectivasPorPeriodo(periodoId);
-        return ResponseEntity.ok(electivas);
+    @PostMapping("/{periodoId}/cerrar-formulario")
+    public ResponseEntity<CambioEstadoResponse> cerrarFormulario(@PathVariable Long periodoId) {
+        CambioEstadoResponse actualizado = periodoService.cerrarFormulario(periodoId);
+        return ResponseEntity.ok(actualizado);
     }
 
 }

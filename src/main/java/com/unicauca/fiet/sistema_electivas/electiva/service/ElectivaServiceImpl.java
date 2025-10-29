@@ -14,11 +14,11 @@ import com.unicauca.fiet.sistema_electivas.electiva.model.Electiva;
 import com.unicauca.fiet.sistema_electivas.electiva.model.ProgramaElectiva;
 import com.unicauca.fiet.sistema_electivas.electiva.model.ProgramaElectivaId;
 import com.unicauca.fiet.sistema_electivas.electiva.repository.ElectivaRepository;
-import com.unicauca.fiet.sistema_electivas.periodo_academico.enums.EstadoElectivaOfertada;
+import com.unicauca.fiet.sistema_electivas.periodo_academico.enums.EstadoOferta;
 import com.unicauca.fiet.sistema_electivas.common.exception.ResourceNotFoundException;
 import com.unicauca.fiet.sistema_electivas.electiva.enums.EstadoElectiva; // Importar el Enum
-import com.unicauca.fiet.sistema_electivas.periodo_academico.model.ElectivaOfertada;
-import com.unicauca.fiet.sistema_electivas.periodo_academico.repository.ElectivaOfertadaRepository;
+import com.unicauca.fiet.sistema_electivas.periodo_academico.model.Oferta;
+import com.unicauca.fiet.sistema_electivas.periodo_academico.repository.OfertaRepository;
 import com.unicauca.fiet.sistema_electivas.electiva.repository.ProgramaElectivaRepository;
 import com.unicauca.fiet.sistema_electivas.programa.enums.EstadoPrograma;
 import com.unicauca.fiet.sistema_electivas.programa.model.Programa;
@@ -42,7 +42,7 @@ public class ElectivaServiceImpl implements ElectivaService {
     @Autowired
     private ProgramaElectivaRepository programaElectivaRepository;
     @Autowired
-    private ElectivaOfertadaRepository electivaOfertadaRepository;
+    private OfertaRepository ofertaRepository;
     /**
      * {@inheritDoc}
      */
@@ -116,7 +116,7 @@ public class ElectivaServiceImpl implements ElectivaService {
         Electiva electiva = electivaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Electiva no encontrada con id: " + id));
 
-        boolean tieneHistorial = electivaOfertadaRepository.hasHistorial(id);
+        boolean tieneHistorial = ofertaRepository.hasHistorial(id);
 
         // Validar cambios únicos (código/nombre) solo si se intenta cambiar
         if (dto.getCodigo() != null && !dto.getCodigo().equals(electiva.getCodigo())) {
@@ -205,8 +205,8 @@ public class ElectivaServiceImpl implements ElectivaService {
         }
 
         // Verificar si tiene ofertas activas (estado OFERTADA)
-        Optional<ElectivaOfertada> ofertaActiva = electivaOfertadaRepository.findFirstByElectivaIdAndEstado(
-                id, EstadoElectivaOfertada.OFERTADA);
+        Optional<Oferta> ofertaActiva = ofertaRepository.findFirstByElectivaIdAndEstado(
+                id, EstadoOferta.OFERTADA);
 
         if (ofertaActiva.isPresent()) {
             String periodo = ofertaActiva.get().getPeriodo().getSemestre();

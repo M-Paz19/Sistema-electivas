@@ -1,5 +1,6 @@
-package com.unicauca.fiet.sistema_electivas.model;
+package com.unicauca.fiet.sistema_electivas.procesamiento_validacion.model;
 
+import com.unicauca.fiet.sistema_electivas.archivo.model.CargaArchivo;
 import com.unicauca.fiet.sistema_electivas.plan_estudio.model.PlanEstudio;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;

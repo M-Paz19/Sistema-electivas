@@ -14,7 +14,7 @@ import java.util.Map;
  */
 @Getter
 @Setter
-public class AgregarElectivaOfertadaDTO {
+public class OfertaRequestDTO {
 
     @NotNull(message = "El ID de la electiva es obligatorio")
     private Long electivaId;

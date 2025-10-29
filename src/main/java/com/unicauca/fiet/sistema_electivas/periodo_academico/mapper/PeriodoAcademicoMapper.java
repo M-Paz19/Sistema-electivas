@@ -1,5 +1,6 @@
 package com.unicauca.fiet.sistema_electivas.periodo_academico.mapper;
 
+import com.unicauca.fiet.sistema_electivas.periodo_academico.dto.CambioEstadoResponse;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.dto.CrearPeriodoAcademicoDTO;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.dto.PeriodoAcademicoResponse;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.enums.EstadoPeriodoAcademico;
@@ -48,7 +49,28 @@ public class PeriodoAcademicoMapper {
                 periodo.getSemestre(),
                 periodo.getFechaApertura(),
                 periodo.getFechaCierre(),
-                periodo.getEstado().name()
+                periodo.getEstado().name(),
+                periodo.getNumeroOpcionesFormulario(),
+                periodo.getUrlFormulario()
         );
     }
+    /**
+     * Convierte un {@link PeriodoAcademico} en un {@link CambioEstadoResponse}
+     * luego de una operación de cambio de estado (por ejemplo, apertura o cierre del período).
+     *
+     * @param periodo Entidad del período académico cuyo estado cambió.
+     * @param mensaje Mensaje personalizado de resultado (por ejemplo, éxito o advertencia).
+     * @return DTO {@link CambioEstadoResponse} con el nuevo estado y mensaje.
+     */
+    public static CambioEstadoResponse toCambioEstadoResponse(PeriodoAcademico periodo, String mensaje) {
+        return new CambioEstadoResponse(
+                periodo.getId(),
+                periodo.getSemestre(),
+                periodo.getEstado().getDescripcion(),
+                mensaje,
+                periodo.getUrlFormulario()
+        );
+    }
+
+
 }

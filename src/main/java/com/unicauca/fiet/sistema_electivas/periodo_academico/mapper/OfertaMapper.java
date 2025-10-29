@@ -1,25 +1,25 @@
 package com.unicauca.fiet.sistema_electivas.periodo_academico.mapper;
 
 import com.unicauca.fiet.sistema_electivas.electiva.model.Electiva;
-import com.unicauca.fiet.sistema_electivas.periodo_academico.dto.AgregarElectivaOfertadaDTO;
-import com.unicauca.fiet.sistema_electivas.periodo_academico.dto.ElectivaOfertadaResponse;
-import com.unicauca.fiet.sistema_electivas.periodo_academico.enums.EstadoElectivaOfertada;
-import com.unicauca.fiet.sistema_electivas.periodo_academico.model.ElectivaOfertada;
+import com.unicauca.fiet.sistema_electivas.periodo_academico.dto.OfertaRequestDTO;
+import com.unicauca.fiet.sistema_electivas.periodo_academico.dto.OfertaResponse;
+import com.unicauca.fiet.sistema_electivas.periodo_academico.enums.EstadoOferta;
+import com.unicauca.fiet.sistema_electivas.periodo_academico.model.Oferta;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.model.PeriodoAcademico;
 
 import java.time.Instant;
 
 /**
- * Clase utilitaria encargada de transformar objetos entre la entidad {@link ElectivaOfertada}
+ * Clase utilitaria encargada de transformar objetos entre la entidad {@link Oferta}
  * y sus correspondientes DTOs.
  *
  * <p>Permite construir y transformar electivas ofertadas desde y hacia sus representaciones
  * utilizadas en las capas de aplicación y presentación.</p>
  */
-public class ElectivaOfertadaMapper {
+public class OfertaMapper {
 
     /**
-     * Convierte un DTO {@link AgregarElectivaOfertadaDTO} en una entidad {@link ElectivaOfertada}.
+     * Convierte un DTO {@link OfertaRequestDTO} en una entidad {@link Oferta}.
      *
      * <p>Este método debe complementarse en el servicio con la asignación de las relaciones
      * a {@link Electiva} y {@link PeriodoAcademico}, ya que el DTO solo contiene los IDs.</p>
@@ -27,31 +27,31 @@ public class ElectivaOfertadaMapper {
      * @param dto datos de la nueva electiva ofertada
      * @param electiva entidad {@link Electiva} asociada
      * @param periodo entidad {@link PeriodoAcademico} asociada
-     * @return entidad {@link ElectivaOfertada} lista para persistir
+     * @return entidad {@link Oferta} lista para persistir
      */
-    public static ElectivaOfertada toEntity(AgregarElectivaOfertadaDTO dto, Electiva electiva, PeriodoAcademico periodo) {
+    public static Oferta toEntity(OfertaRequestDTO dto, Electiva electiva, PeriodoAcademico periodo) {
         if (dto == null || electiva == null || periodo == null) return null;
 
-        ElectivaOfertada ofertada = new ElectivaOfertada();
+        Oferta ofertada = new Oferta();
         ofertada.setElectiva(electiva);
         ofertada.setPeriodo(periodo);
         ofertada.setCuposPorPrograma(dto.getCuposPorPrograma());
-        ofertada.setEstado(EstadoElectivaOfertada.OFERTADA);
+        ofertada.setEstado(EstadoOferta.OFERTADA);
         ofertada.setFechaCreacion(Instant.now());
         ofertada.setFechaActualizacion(Instant.now());
         return ofertada;
     }
 
     /**
-     * Convierte una entidad {@link ElectivaOfertada} en su representación {@link ElectivaOfertadaResponse}.
+     * Convierte una entidad {@link Oferta} en su representación {@link OfertaResponse}.
      *
      * @param ofertada entidad a convertir
      * @return DTO con la información detallada de la electiva ofertada
      */
-    public static ElectivaOfertadaResponse toResponse(ElectivaOfertada ofertada) {
+    public static OfertaResponse toResponse(Oferta ofertada) {
         if (ofertada == null) return null;
 
-        return ElectivaOfertadaResponse.builder()
+        return OfertaResponse.builder()
                 .id(ofertada.getId())
                 .electivaId(ofertada.getElectiva() != null ? ofertada.getElectiva().getId() : null)
                 .codigoElectiva(ofertada.getElectiva() != null ? ofertada.getElectiva().getCodigo() : null)

@@ -1,11 +1,13 @@
-package com.unicauca.fiet.sistema_electivas.model;
+package com.unicauca.fiet.sistema_electivas.archivo.model;
 
+import com.unicauca.fiet.sistema_electivas.archivo.enums.EstadoArchivo;
+import com.unicauca.fiet.sistema_electivas.archivo.enums.TipoArchivo;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.model.PeriodoAcademico;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.annotations.ColumnDefault;
+
 
 import java.time.Instant;
 
@@ -15,9 +17,11 @@ import java.time.Instant;
 @Table(name = "carga_archivos")
 public class CargaArchivo {
     @Id
-    @ColumnDefault("nextval('carga_archivos_id_seq')")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "carga_archivos_seq")
+    @SequenceGenerator(name = "carga_archivos_seq", sequenceName = "carga_archivos_seq", allocationSize = 1)
     @Column(name = "id", nullable = false)
     private Long id;
+
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -25,8 +29,9 @@ public class CargaArchivo {
     private PeriodoAcademico periodo;
 
     @NotNull
-    @Column(name = "tipo_archivo", nullable = false, length = Integer.MAX_VALUE)
-    private String tipoArchivo;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_archivo", nullable = false)
+    private TipoArchivo tipoArchivo;
 
     @NotNull
     @Column(name = "nombre_archivo", nullable = false, length = Integer.MAX_VALUE)
@@ -41,7 +46,7 @@ public class CargaArchivo {
     private Instant fechaCarga;
 
     @NotNull
-    @Column(name = "estado", nullable = false, length = Integer.MAX_VALUE)
-    private String estado;
-
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado", nullable = false)
+    private EstadoArchivo estado;
 }

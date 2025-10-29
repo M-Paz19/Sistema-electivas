@@ -3,6 +3,7 @@ package com.unicauca.fiet.sistema_electivas.programa.repository;
 import com.unicauca.fiet.sistema_electivas.programa.enums.EstadoPrograma;
 import com.unicauca.fiet.sistema_electivas.programa.model.Programa;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
@@ -14,6 +15,7 @@ import java.util.Optional;
  * y define consultas personalizadas para buscar programas por
  * código o nombre.
  */
+@Repository
 public interface ProgramaRepository extends JpaRepository<Programa, Long> {
 
     /**
@@ -56,4 +58,11 @@ public interface ProgramaRepository extends JpaRepository<Programa, Long> {
      * @return lista de programas coincidentes
      */
     List<Programa> findByCodigoContainingIgnoreCase(String codigo);
+    /**
+     * Devuelve opcionalemnte un programa en vase al nombre
+     *
+     * @param nombre nombre para buscar ele programa
+     * @return el programa opcional encontrado
+     */
+    Optional<Programa> findByNombreIgnoreCase(String nombre);
 }

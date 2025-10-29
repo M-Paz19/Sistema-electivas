@@ -36,4 +36,9 @@ public class PeriodoAcademico {
     @Column(name = "estado", nullable = false, length = 30)
     private EstadoPeriodoAcademico estado;
 
+    @Column(name = "numero_opciones_formulario")
+    private Integer numeroOpcionesFormulario;
+
+    @Column(name = "url_formulario")
+    private String urlFormulario;
 }
