@@ -22,7 +22,6 @@ public class CargaArchivo {
     @Column(name = "id", nullable = false)
     private Long id;
 
-
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "periodo_id", nullable = false)

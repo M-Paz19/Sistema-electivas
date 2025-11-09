@@ -7,10 +7,9 @@ package com.unicauca.fiet.sistema_electivas.programa.enums;
  * permitiendo controlar su disponibilidad en el sistema.
  */
 public enum EstadoPrograma {
-    PENDIENTE_PLAN("Pendiente de plan"),
+    BORRADOR("Borrador"),
     APROBADO("Aprobado"),
     DESHABILITADO("Deshabilitado");
-
 
     private final String descripcion;
 

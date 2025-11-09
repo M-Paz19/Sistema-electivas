@@ -1,6 +1,7 @@
 package com.unicauca.fiet.sistema_electivas.periodo_academico.model;
 
 import com.unicauca.fiet.sistema_electivas.archivo.model.CargaArchivo;
+import com.unicauca.fiet.sistema_electivas.periodo_academico.enums.EstadoRespuestaFormulario;
 import com.unicauca.fiet.sistema_electivas.programa.model.Programa;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -50,6 +51,11 @@ public class RespuestasFormulario {
     @NotNull
     @Column(name = "apellidos_estudiante", nullable = false)
     private String apellidosEstudiante;
+
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado", nullable = false)
+    private EstadoRespuestaFormulario estado = EstadoRespuestaFormulario.SIN_PROCESAR;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "programa_id")

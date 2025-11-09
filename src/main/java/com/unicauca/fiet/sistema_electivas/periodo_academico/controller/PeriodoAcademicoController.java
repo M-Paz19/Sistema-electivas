@@ -8,7 +8,7 @@ import com.unicauca.fiet.sistema_electivas.common.exception.InvalidStateExceptio
 import com.unicauca.fiet.sistema_electivas.common.exception.ResourceNotFoundException;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.dto.*;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.enums.EstadoPeriodoAcademico;
-import com.unicauca.fiet.sistema_electivas.periodo_academico.model.PeriodoAcademico;
+
 import com.unicauca.fiet.sistema_electivas.periodo_academico.service.PeriodoAcademicoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -90,7 +91,7 @@ public class PeriodoAcademicoController {
      * Cierra el formulario de preinscripción asociado a un período académico.
      *
      * <p>Este proceso marca el fin de la etapa de recolección de respuestas y cambia el estado
-     * del período a {@link EstadoPeriodoAcademico#EN_PROCESO_ASIGNACION}.
+     * del período a {@link EstadoPeriodoAcademico#CERRADO_FORMULARIO}.
      * El sistema intenta obtener automáticamente las respuestas desde Google Forms,
      * usando la URL configurada para ese período.</p>
      *
@@ -103,6 +104,25 @@ public class PeriodoAcademicoController {
     public ResponseEntity<CambioEstadoResponse> cerrarFormulario(@PathVariable Long periodoId) {
         CambioEstadoResponse actualizado = periodoService.cerrarFormulario(periodoId);
         return ResponseEntity.ok(actualizado);
+    }
+
+    /**
+     * Endpoint para cargar manualmente las respuestas del formulario de preinscripción.
+     *
+     * <p>Permite a un administrador académico subir un archivo (Excel o CSV) con las respuestas
+     * cuando la obtención automática desde Google Forms no fue posible o se desea una carga manual.</p>
+     *
+     * @param periodoId ID del período académico al que corresponden las respuestas.
+     * @param file Archivo con las respuestas a importar.
+     * @return Respuesta HTTP 200 con el objeto {@link CambioEstadoResponse} en caso de éxito.
+     */
+    @PostMapping("/{periodoId}/cargar-respuestas")
+    public ResponseEntity<CambioEstadoResponse> cargarRespuestasManual(
+            @PathVariable Long periodoId,
+            @RequestParam("file") MultipartFile file) {
+
+        CambioEstadoResponse response = periodoService.cargarRespuestasManual(periodoId, file);
+        return ResponseEntity.ok(response);
     }
 
 }

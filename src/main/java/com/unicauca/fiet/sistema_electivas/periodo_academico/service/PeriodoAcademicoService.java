@@ -9,6 +9,7 @@ import com.unicauca.fiet.sistema_electivas.common.exception.DuplicateResourceExc
 import com.unicauca.fiet.sistema_electivas.common.exception.InvalidStateException;
 import com.unicauca.fiet.sistema_electivas.common.exception.ResourceNotFoundException;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.model.PeriodoAcademico;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -92,4 +93,28 @@ public interface PeriodoAcademicoService {
      * @throws RuntimeException Si ocurre un error durante el cierre o la obtención de respuestas.
      */
     CambioEstadoResponse cerrarFormulario(Long periodoId);
+    /**
+     * Carga manualmente las respuestas del formulario de preinscripción de un período académico.
+     *
+     * <p>Esta función actúa como mecanismo alternativo cuando la obtención automática desde Google Forms falla
+     * o se requiere un override manual. Permite subir un archivo con las respuestas (formato Excel o CSV) y
+     * procesarlas directamente en el sistema.</p>
+     *
+     * <p>Acciones realizadas:
+     * <ul>
+     *   <li>Valida que el período esté en estado {@code ABIERTO_FORMULARIO} antes de cargar respuestas.</li>
+     *   <li>Parsea el archivo recibido, verificando su formato y estructura esperada.</li>
+     *   <li>Guarda una copia física del archivo como respaldo histórico.</li>
+     *   <li>Procesa las respuestas y las almacena en la base de datos.</li>
+     *   <li>Cambia el estado del período a {@code CERRADO_FORMULARIO}.</li>
+     * </ul>
+     *
+     * @param periodoId ID del período académico sobre el que se realiza la carga manual.
+     * @param file Archivo subido por el usuario, conteniendo las respuestas del formulario.
+     * @return Objeto {@link CambioEstadoResponse} con la información del nuevo estado del período.
+     * @throws ResourceNotFoundException Si el período indicado no existe.
+     * @throws InvalidStateException Si el período no está en estado {@code ABIERTO_FORMULARIO}.
+     * @throws BusinessException Si el archivo es inválido o presenta errores de formato.
+     */
+    CambioEstadoResponse cargarRespuestasManual(Long periodoId, MultipartFile file);
 }

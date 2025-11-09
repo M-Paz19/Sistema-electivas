@@ -17,7 +17,6 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -31,20 +30,17 @@ public class ArchivoServiceImpl implements ArchivoService {
 
     private final CargaArchivoRepository cargaArchivoRepository;
 
-    private static final String BASE_PATH = "storage/respuestas_formulario/";
-
+    private static final String PATH_RESPUESTAS = "storage/respuestas_formulario/";
+    private static final String PATH_LOTES_SIMCA = "storage/lotes_simca/";
     /**
-     * Genera un archivo CSV con las respuestas del formulario y lo registra en la BD.
+     * {@inheritDoc}
      */
     @Override
     @Transactional
     public CargaArchivo guardarArchivoRespuestas(List<Map<String, String>> respuestas, PeriodoAcademico periodo) {
         try {
             // Crear directorio si no existe
-            Path baseDir = Paths.get(BASE_PATH);
-            if (!Files.exists(baseDir)) {
-                Files.createDirectories(baseDir);
-            }
+            Path baseDir = ensureDirectoryExists(PATH_RESPUESTAS);
 
             String fileName = "respuestas_" + periodo.getSemestre() + "_" + LocalDate.now() + ".csv";
             Path filePath = baseDir.resolve(fileName);
@@ -105,7 +101,62 @@ public class ArchivoServiceImpl implements ArchivoService {
             throw new RuntimeException("Error al guardar archivo de respuestas", e);
         }
     }
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Transactional
+    public List<CargaArchivo> generarArchivosLotesSimca(List<List<String>> lotes, PeriodoAcademico periodo) {
+        try {
+            // Crear directorio si no existe
+            Path baseDir = ensureDirectoryExists(PATH_LOTES_SIMCA);
+            List<CargaArchivo> archivosGenerados = new ArrayList<>();
 
+            for (int i = 0; i < lotes.size(); i++) {
+                List<String> lote = lotes.get(i);
+
+                // Generar nombre de archivo
+                String fileName = String.format("Lote_%d_Periodo_%s_CodigosSIMCA.txt",
+                        i + 1, periodo.getSemestre());
+                Path filePath = baseDir.resolve(fileName);
+
+                // Contenido separado por comas (según formato de SIMCA)
+                String contenido = String.join(",", lote);
+
+                // Escribir archivo
+                try (BufferedWriter writer = Files.newBufferedWriter(filePath, StandardCharsets.UTF_8)) {
+                    writer.write(contenido);
+                }
+
+                // Registrar en BD
+                CargaArchivo archivo = new CargaArchivo();
+                archivo.setPeriodo(periodo);
+                archivo.setTipoArchivo(TipoArchivo.LOTES_CODIGOS);
+                archivo.setNombreArchivo(fileName);
+                archivo.setRutaAlmacenamiento(filePath.toString());
+                archivo.setFechaCarga(Instant.now());
+                archivo.setEstado(EstadoArchivo.PROCESADO);
+
+                cargaArchivoRepository.save(archivo);
+                archivosGenerados.add(archivo);
+
+                log.info("Lote {} generado correctamente: {}", i + 1, filePath);
+            }
+
+            return archivosGenerados;
+
+        } catch (IOException e) {
+            log.error("Error al generar archivos de lotes SIMCA: {}", e.getMessage());
+            throw new RuntimeException("Error al generar archivos de lotes SIMCA", e);
+        }
+    }
+    private Path ensureDirectoryExists(String dirPath) throws IOException {
+        Path baseDir = Paths.get(dirPath);
+        if (!Files.exists(baseDir)) {
+            Files.createDirectories(baseDir);
+        }
+        return baseDir;
+    }
     private String quote(String value) {
         if (value == null) return "";
         return "\"" + value.replace("\"", "\"\"") + "\"";

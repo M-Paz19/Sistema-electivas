@@ -1,0 +1,42 @@
+package com.unicauca.fiet.sistema_electivas.periodo_academico.enums;
+
+import com.unicauca.fiet.sistema_electivas.periodo_academico.model.RespuestasFormulario;
+
+/**
+ * Enum que representa los posibles estados de una {@link RespuestasFormulario}.
+ *
+ * <p>Este estado refleja la etapa y resultado del procesamiento de la respuesta
+ * enviada por un estudiante en el formulario de selección de electivas.</p>
+ *
+ * <ul>
+ *   <li>SIN_PROCESAR: Respuesta recién cargada, aún no analizada.</li>
+ *   <li>DUPLICADO: Respuesta descartada por existir otra más antigua del mismo estudiante.</li>
+ *   <li>UNICO: Respuesta única (no hay duplicados para ese código).</li>
+ *   <li>FORMATO_INVALIDO: Código estudiantil con formato desconocido o no estándar; requiere revisión manual.</li>
+ *   <li>NO_CUMPLE: El estudiante no cumple el requisito de antigüedad (menos de 7 semestres cursados).</li>
+ *   <li>CUMPLE: El estudiante cumple el requisito de antigüedad (7 o más semestres cursados).</li>
+ *   <li>DESCARTADO: Estudiante descartado manualmente por el administrador.</li>
+ *   <li>INCLUIDO: Estudiante incluido manualmente para validación en SIMCA.</li>
+ *   <li>VALIDO: Respuesta verificada y aceptada para procesamiento final.</li>
+ * </ul>
+ */
+public enum EstadoRespuestaFormulario {
+    SIN_PROCESAR("sin procesar"),
+    DUPLICADO("duplicado"),
+    UNICO("sin duplicados"),
+    FORMATO_INVALIDO("formato desconocido código estudiantil- revisión manual"),
+    NO_CUMPLE("código estudiantil no valido por antigüedad"),
+    CUMPLE("código estudiantil valido"),
+    DESCARTADO("descartado manualmente"),
+    INCLUIDO("incluido manualmente");
+
+    private final String descripcion;
+
+    EstadoRespuestaFormulario(String descripcion) {
+        this.descripcion = descripcion;
+    }
+
+    public String getDescripcion() {
+        return descripcion;
+    }
+}

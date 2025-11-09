@@ -2,6 +2,10 @@ package com.unicauca.fiet.sistema_electivas.periodo_academico.enums;
 
 import com.unicauca.fiet.sistema_electivas.periodo_academico.model.PeriodoAcademico;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
 /**
  * Enum que representa los posibles estados de un {@link PeriodoAcademico}.
  *
@@ -12,18 +16,37 @@ import com.unicauca.fiet.sistema_electivas.periodo_academico.model.PeriodoAcadem
  * </ul>
  */
 public enum EstadoPeriodoAcademico {
-    CONFIGURACION("configuración"),
-    ABIERTO("Abierto"),
-    EN_PROCESO_ASIGNACION("En proceso de asignación"),
-    CERRADO("Cerrado");
+
+    CONFIGURACION("Configuración inicial del periodo", false),
+    ABIERTO_FORMULARIO("Formulario abierto para estudiantes", true),
+    CERRADO_FORMULARIO("Formulario cerrado - respuestas en revisión", true),
+
+    PROCESO_FILTRADO_DUPLICADOS("Aplicado filtro de duplicados", true),
+    PROCESO_CLASIFICACION_ANTIGUEDAD("Codigos formulario validados por formato y antiguedad", true),
+    PROCESO_CONFIRMACION_SIMCA("Confirmación final para SIMCA", true),
+
+    EN_PROCESO_ASIGNACION("Asignación de electivas en curso", true),
+    CERRADO("Periodo cerrado - asignaciones completadas", false);
 
     private final String descripcion;
+    private final boolean activo;
 
-    EstadoPeriodoAcademico(String descripcion) {
+    EstadoPeriodoAcademico(String descripcion, boolean activo) {
         this.descripcion = descripcion;
+        this.activo = activo;
     }
 
     public String getDescripcion() {
         return descripcion;
+    }
+
+    public boolean esActivo() {
+        return activo;
+    }
+
+    public static List<EstadoPeriodoAcademico> obtenerEstadosActivos() {
+        return Arrays.stream(values())
+                .filter(EstadoPeriodoAcademico::esActivo)
+                .collect(Collectors.toList());
     }
 }

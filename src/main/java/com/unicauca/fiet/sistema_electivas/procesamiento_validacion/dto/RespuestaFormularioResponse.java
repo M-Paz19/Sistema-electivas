@@ -25,6 +25,7 @@ public class RespuestaFormularioResponse {
     private String programaNombre;
     private String periodoSemestre;
     private Instant timestampRespuesta;
+    private String estado;
     // ahora lista de objetos, no de strings
     private List<ElectivaSeleccionadaResponse> electivasSeleccionadas;
 }

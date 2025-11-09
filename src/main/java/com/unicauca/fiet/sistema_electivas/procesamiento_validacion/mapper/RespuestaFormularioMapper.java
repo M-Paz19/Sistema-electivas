@@ -5,6 +5,7 @@ package com.unicauca.fiet.sistema_electivas.procesamiento_validacion.mapper;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.model.RespuestaOpcion;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.model.RespuestasFormulario;
 import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.dto.ElectivaSeleccionadaResponse;
+import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.dto.RespuestaFormularioDesicionResponse;
 import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.dto.RespuestaFormularioResponse;
 
 import java.util.List;
@@ -50,6 +51,7 @@ public class RespuestaFormularioMapper {
                 entidad.getPrograma() != null ? entidad.getPrograma().getNombre() : null,
                 entidad.getPeriodo() != null ? entidad.getPeriodo().getSemestre() : null,
                 entidad.getTimestampRespuesta(),
+                entidad.getEstado().getDescripcion(),
                 electivasSeleccionadas
         );
     }
@@ -65,5 +67,16 @@ public class RespuestaFormularioMapper {
         return entidades.stream()
                 .map(RespuestaFormularioMapper::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    public static RespuestaFormularioDesicionResponse toRespuestaFormularioResponse(RespuestasFormulario entidad) {
+        return RespuestaFormularioDesicionResponse.builder()
+                .id(entidad.getId())
+                .codigoEstudiante(entidad.getCodigoEstudiante())
+                .correoEstudiante(entidad.getCorreoEstudiante())
+                .nombreCompleto(entidad.getNombreEstudiante() + " " + entidad.getApellidosEstudiante())
+                .estado(entidad.getEstado().name())
+                .mensaje("Estado actualizado correctamente.")
+                .build();
     }
 }

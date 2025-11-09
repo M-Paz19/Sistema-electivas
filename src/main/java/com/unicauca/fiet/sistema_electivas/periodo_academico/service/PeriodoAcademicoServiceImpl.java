@@ -2,24 +2,17 @@ package com.unicauca.fiet.sistema_electivas.periodo_academico.service;
 
 import com.unicauca.fiet.sistema_electivas.archivo.service.ArchivoService;
 import com.unicauca.fiet.sistema_electivas.common.exception.*;
-import com.unicauca.fiet.sistema_electivas.electiva.enums.EstadoElectiva;
 import com.unicauca.fiet.sistema_electivas.integracion.google.GoogleFormsClient;
 import com.unicauca.fiet.sistema_electivas.archivo.model.CargaArchivo;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.dto.*;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.enums.EstadoOferta;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.enums.EstadoPeriodoAcademico;
 import com.unicauca.fiet.sistema_electivas.electiva.model.Electiva;
-import com.unicauca.fiet.sistema_electivas.periodo_academico.mapper.OfertaMapper;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.mapper.PeriodoAcademicoMapper;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.model.Oferta;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.model.PeriodoAcademico;
-import com.unicauca.fiet.sistema_electivas.electiva.model.ProgramaElectiva;
-import com.unicauca.fiet.sistema_electivas.periodo_academico.model.RespuestasFormulario;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.repository.OfertaRepository;
-import com.unicauca.fiet.sistema_electivas.electiva.repository.ElectivaRepository;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.repository.PeriodoAcademicoRepository;
-import com.unicauca.fiet.sistema_electivas.electiva.repository.ProgramaElectivaRepository;
-import com.unicauca.fiet.sistema_electivas.periodo_academico.repository.RespuestasFormularioRepository;
 import com.unicauca.fiet.sistema_electivas.programa.enums.EstadoPrograma;
 import com.unicauca.fiet.sistema_electivas.programa.model.Programa;
 import com.unicauca.fiet.sistema_electivas.programa.repository.ProgramaRepository;
@@ -29,14 +22,13 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.*;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @Service
@@ -201,10 +193,9 @@ public class PeriodoAcademicoServiceImpl implements PeriodoAcademicoService {
             );
         }
 
-        //  3️. Validar que no haya otro período abierto
-        if (periodoRepository.existsByEstadoIn(List.of(
-                EstadoPeriodoAcademico.ABIERTO, EstadoPeriodoAcademico.EN_PROCESO_ASIGNACION))) {
-            throw new InvalidStateException("Ya existe otro período ABIERTO o EN_PROCESO_ASIGNACION.");
+        // 3️. Validar que no haya otro período activo
+        if (periodoRepository.existsByEstadoIn(EstadoPeriodoAcademico.obtenerEstadosActivos())) {
+            throw new InvalidStateException("Ya existe otro período académico activo en curso.");
         }
 
         // 4. Validar fecha de apertura
@@ -234,7 +225,7 @@ public class PeriodoAcademicoServiceImpl implements PeriodoAcademicoService {
         periodo.setUrlFormulario(urlFormulario);
 
         // 9. Cambiar estado del período a ABIERTO
-        periodo.setEstado(EstadoPeriodoAcademico.ABIERTO);
+        periodo.setEstado(EstadoPeriodoAcademico.ABIERTO_FORMULARIO);
         periodoRepository.save(periodo);
 
         // 10. Retornar respuesta
@@ -254,7 +245,7 @@ public class PeriodoAcademicoServiceImpl implements PeriodoAcademicoService {
         PeriodoAcademico periodo = periodoRepository.findById(periodoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Período no encontrado"));
 
-        if (periodo.getEstado() != EstadoPeriodoAcademico.ABIERTO) {
+        if (periodo.getEstado() != EstadoPeriodoAcademico.ABIERTO_FORMULARIO) {
             throw new InvalidStateException("Solo se puede cerrar un período en estado ABIERTO.");
         }
 
@@ -264,20 +255,23 @@ public class PeriodoAcademicoServiceImpl implements PeriodoAcademicoService {
         }
 
         // 1. Cerrar formulario en Google
-        googleFormsClient.cerrarFormulario(formId);
+        try {
+            // flujo automático
+            googleFormsClient.cerrarFormulario(formId);
+            List<Map<String, String>> datos = googleFormsClient.obtenerRespuestas(formId);
+            if (datos.isEmpty()) throw new GoogleFormsException("No se encontraron respuestas.");
 
-        // 2. Obtener respuestas crudas desde Google
-        List<Map<String, String>> datos = googleFormsClient.obtenerRespuestas(formId);
-        if (datos.isEmpty()) throw new GoogleFormsException("No se encontraron respuestas.");
+            CargaArchivo archivo = archivoService.guardarArchivoRespuestas(datos, periodo);
+            formularioImportService.procesarRespuestas(datos, periodo, archivo);
 
-        // 3. Guardar archivo en almacenamiento local o en bucket
-        CargaArchivo archivo = archivoService.guardarArchivoRespuestas(datos, periodo);
-
-        // 3. Procesar y guardar respuestas
-        formularioImportService.procesarRespuestas(datos, periodo, archivo);
+        } catch (GoogleFormsException ex) {
+            // Fallback: solicitar carga manual
+            log.warn("Fallo en obtención automática de respuestas. Requiere carga manual. Causa: {}", ex.getMessage());
+            throw new InvalidStateException("No fue posible obtener respuestas automáticamente. Por favor cargue manualmente las respuestas.");
+        }
 
         // 4. Cambiar estado del período
-        periodo.setEstado(EstadoPeriodoAcademico.EN_PROCESO_ASIGNACION);
+        periodo.setEstado(EstadoPeriodoAcademico.CERRADO_FORMULARIO);
         periodoRepository.save(periodo);
         // 10. Retornar respuesta
         return PeriodoAcademicoMapper.toCambioEstadoResponse(
@@ -310,6 +304,37 @@ public class PeriodoAcademicoServiceImpl implements PeriodoAcademicoService {
         } catch (Exception e) {
             throw new BusinessException("No se pudo extraer el formId de la URL: " + urlFormulario, e);
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Transactional
+    public CambioEstadoResponse cargarRespuestasManual(Long periodoId, MultipartFile file) {
+        PeriodoAcademico periodo = periodoRepository.findById(periodoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Período no encontrado"));
+
+        if (periodo.getEstado() != EstadoPeriodoAcademico.ABIERTO_FORMULARIO) {
+            throw new InvalidStateException("Solo se pueden cargar respuestas de un período en estado ABIERTO.");
+        }
+
+        List<Map<String, String>> datos =  formularioImportService.parsearRespuestasFormulario(file, periodo);
+
+        // Guardar archivo físicamente (como respaldo)
+        CargaArchivo archivo = archivoService.guardarArchivoRespuestas(datos, periodo);
+
+        // Procesar y guardar en BD
+        formularioImportService.procesarRespuestas(datos, periodo, archivo);
+
+        // Cambiar estado
+        periodo.setEstado(EstadoPeriodoAcademico.CERRADO_FORMULARIO);
+        periodoRepository.save(periodo);
+
+        return PeriodoAcademicoMapper.toCambioEstadoResponse(
+                periodo,
+                "Período " + periodo.getSemestre() + " cerrado y respuestas cargadas manualmente."
+        );
     }
 
 
