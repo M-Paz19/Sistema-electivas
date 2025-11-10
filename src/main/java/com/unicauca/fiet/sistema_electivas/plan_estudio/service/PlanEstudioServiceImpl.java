@@ -290,9 +290,7 @@ public class PlanEstudioServiceImpl implements PlanEstudioService {
         plan.setEstado(EstadoPlanEstudio.ACTIVO);
         planEstudioRepository.save(plan);
 
-
-        // Si el programa estaba pendiente y ahora tiene un plan activo → aprobar
-        if (programa.getEstado() == EstadoPrograma.PENDIENTE_PLAN) {
+        if (programa.getEstado() == EstadoPrograma.BORRADOR) {
             programa.setEstado(EstadoPrograma.APROBADO);
             programaRepository.save(programa);
         }

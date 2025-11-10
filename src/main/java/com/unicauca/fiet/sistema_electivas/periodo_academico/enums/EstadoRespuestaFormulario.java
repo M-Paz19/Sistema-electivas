@@ -28,7 +28,13 @@ public enum EstadoRespuestaFormulario {
     NO_CUMPLE("código estudiantil no valido por antigüedad"),
     CUMPLE("código estudiantil valido"),
     DESCARTADO("descartado manualmente"),
-    INCLUIDO("incluido manualmente");
+    INCLUIDO("incluido manualmente"),
+
+    INCONSISTENTE_SIMCA("El código del CSV no se encontró en las respuestas válidas"),
+    CORREGIDO("El código era INCONSISTENTE, pero fue corregido manualmente"),
+    FORZAR_INCLUSION("Se forzó la inclusión de un estudiante que era inconsistente"),
+    DATOS_CARGADOS("El formulario fue procesado y sus datos académicos");
+
 
     private final String descripcion;
 

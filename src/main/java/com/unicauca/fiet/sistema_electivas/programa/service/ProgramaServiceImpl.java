@@ -62,7 +62,7 @@ public class ProgramaServiceImpl implements ProgramaService {
         Programa programa = ProgramaMapper.toEntity(request);
 
         // Forzar estado de creacion aquí:
-        programa.setEstado(EstadoPrograma.PENDIENTE_PLAN);
+        programa.setEstado(EstadoPrograma.BORRADOR);
 
         // 4️ Guardar la entidad
         Programa saved = programaRepository.save(programa);

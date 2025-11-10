@@ -59,4 +59,11 @@ public interface PlanEstudioRepository extends JpaRepository<PlanEstudio, Long> 
      */
     boolean existsByProgramaAndAnioInicio(Programa programa, Integer anioInicio);
 
+    /**
+     * Busca un Plan de Estudio basado en el nombre de su Programa asociado.
+     * Asume que el nombre del programa es único.
+     */
+    Optional<PlanEstudio> findByPrograma_Nombre(String nombrePrograma);
+
+
 }

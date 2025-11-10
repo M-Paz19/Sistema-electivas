@@ -19,6 +19,7 @@ public enum TipoArchivo {
     ARCHIVO_ASIGNACION("Archivo de asignación de electivas"),
     LISTAS("Listas consolidadas");
 
+
     private final String descripcion;
 
     TipoArchivo(String descripcion) {
