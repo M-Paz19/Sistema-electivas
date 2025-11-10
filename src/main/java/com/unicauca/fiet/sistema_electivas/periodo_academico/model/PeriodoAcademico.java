@@ -33,7 +33,7 @@ public class PeriodoAcademico {
 
     @NotNull
     @Enumerated(EnumType.STRING)
-    @Column(name = "estado", nullable = false, length = 30)
+    @Column(name = "estado", nullable = false, length = 50)
     private EstadoPeriodoAcademico estado;
 
     @Column(name = "numero_opciones_formulario")

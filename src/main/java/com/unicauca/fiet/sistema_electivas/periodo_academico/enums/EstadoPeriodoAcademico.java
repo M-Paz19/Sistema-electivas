@@ -25,6 +25,8 @@ public enum EstadoPeriodoAcademico {
     PROCESO_CLASIFICACION_ANTIGUEDAD("Codigos formulario validados por formato y antiguedad", true),
     PROCESO_CONFIRMACION_SIMCA("Confirmación final para SIMCA", true),
 
+
+
     EN_PROCESO_ASIGNACION("Asignación de electivas en curso", true),
     CERRADO("Periodo cerrado - asignaciones completadas", false);
 

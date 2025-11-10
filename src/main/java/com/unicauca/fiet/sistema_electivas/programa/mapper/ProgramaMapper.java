@@ -47,7 +47,7 @@ public class ProgramaMapper {
         Programa programa = new Programa();
         programa.setCodigo(dto.getCodigo());
         programa.setNombre(dto.getNombre());
-        programa.setEstado(EstadoPrograma.PENDIENTE_PLAN); // o el estado inicial por defecto
+        programa.setEstado(EstadoPrograma.BORRADOR); // o el estado inicial por defecto
         return programa;
     }
 

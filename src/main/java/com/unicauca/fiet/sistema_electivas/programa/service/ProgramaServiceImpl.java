@@ -34,7 +34,7 @@ public class ProgramaServiceImpl implements ProgramaService {
      *   <li>El nombre del programa debe ser único.</li>
      * </ul>
      *
-     * <p>El estado inicial de todo programa creado será {@link EstadoPrograma#PENDIENTE_PLAN}.
+     * <p>El estado inicial de todo programa creado será {@link EstadoPrograma#BORRADOR}.
      *
      * @param request Objeto con los datos del programa (código, nombre).
      * @return {@link ProgramaResponse} con la información del programa creado.
@@ -62,7 +62,7 @@ public class ProgramaServiceImpl implements ProgramaService {
         Programa programa = ProgramaMapper.toEntity(request);
 
         // Forzar estado de creacion aquí:
-        programa.setEstado(EstadoPrograma.PENDIENTE_PLAN);
+        programa.setEstado(EstadoPrograma.BORRADOR);
 
         // 4️ Guardar la entidad
         Programa saved = programaRepository.save(programa);
