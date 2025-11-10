@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface RespuestasFormularioRepository  extends JpaRepository<RespuestasFormulario, Long> {
@@ -50,5 +51,7 @@ public interface RespuestasFormularioRepository  extends JpaRepository<Respuesta
      * para un periodo académico específico.
      */
     long countByPeriodoIdAndEstadoIn(Long periodoId, List<EstadoRespuestaFormulario> estados);
+    List<RespuestasFormulario> findByPeriodoIdAndEstadoIn(Long periodoId, List<EstadoRespuestaFormulario> estados);
 
+    Optional<RespuestasFormulario> findByCodigoEstudiante(String codigoEstudiante);
 }

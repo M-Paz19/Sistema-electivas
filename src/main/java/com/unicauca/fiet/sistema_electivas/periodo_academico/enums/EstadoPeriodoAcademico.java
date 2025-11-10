@@ -24,6 +24,7 @@ public enum EstadoPeriodoAcademico {
     PROCESO_FILTRADO_DUPLICADOS("Aplicado filtro de duplicados", true),
     PROCESO_CLASIFICACION_ANTIGUEDAD("Codigos formulario validados por formato y antiguedad", true),
     PROCESO_CONFIRMACION_SIMCA("Confirmación final para SIMCA", true),
+    PROCESO_CARGA_SIMCA("Carga de datos SIMCA", true),
 
 
 

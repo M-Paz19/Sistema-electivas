@@ -2,6 +2,7 @@ package com.unicauca.fiet.sistema_electivas.procesamiento_validacion.model;
 
 import com.unicauca.fiet.sistema_electivas.archivo.model.CargaArchivo;
 import com.unicauca.fiet.sistema_electivas.plan_estudio.model.PlanEstudio;
+import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.enums.EstadoAptitud;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -28,6 +29,10 @@ public class DatosAcademico {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "plan_estudios_id", nullable = false)
     private PlanEstudio planEstudios;
+
+    @NotNull
+    @Column(name = "nombres", nullable = false, length = Integer.MAX_VALUE)
+    private String nombres;
 
     @NotNull
     @Column(name = "apellidos", nullable = false, length = Integer.MAX_VALUE)
@@ -66,8 +71,9 @@ public class DatosAcademico {
     private BigDecimal porcentajeAvance;
 
     @NotNull
+    @Enumerated(EnumType.STRING)
     @Column(name = "estado_aptitud", nullable = false, length = Integer.MAX_VALUE)
-    private String estadoAptitud;
+    private EstadoAptitud estadoAptitud;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

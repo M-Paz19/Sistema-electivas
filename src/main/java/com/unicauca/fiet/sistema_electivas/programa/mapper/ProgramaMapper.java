@@ -48,6 +48,7 @@ public class ProgramaMapper {
         programa.setCodigo(dto.getCodigo());
         programa.setNombre(dto.getNombre());
         programa.setEstado(EstadoPrograma.BORRADOR); // o el estado inicial por defecto
+
         return programa;
     }
 
@@ -65,6 +66,6 @@ public class ProgramaMapper {
         if (dto.getNombre() != null && !dto.getNombre().isBlank()) {
             programa.setNombre(dto.getNombre());
         }
-        // No se permite cambiar el código ni el estado aquí.
+
     }
 }
