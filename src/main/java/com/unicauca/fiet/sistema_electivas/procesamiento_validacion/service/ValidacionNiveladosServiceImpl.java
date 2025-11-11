@@ -128,7 +128,7 @@ public class ValidacionNiveladosServiceImpl implements ValidacionNiveladosServic
         response.setCodigoEstudiante(datos.getCodigoEstudiante());
         response.setNombreCompleto(datos.getApellidos() + " " + datos.getUsuario());
         response.setPrograma(datos.getPrograma());
-        response.setEstado(datos.getEstadoAptitud());
+        response.setEstado(datos.getEstadoAptitud().getDescripcion());
 
 
         return response;
