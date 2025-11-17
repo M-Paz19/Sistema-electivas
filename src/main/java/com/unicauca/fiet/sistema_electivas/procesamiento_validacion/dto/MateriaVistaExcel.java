@@ -11,8 +11,9 @@ public class MateriaVistaExcel {
     private String nombre;
     private Integer creditos;
     private Integer semestre;
-    private Double nota;
-    private Double habilitacion;
+    private String nota;
+    private String habilitacion;
     private Double definitiva;
+    private boolean aprobadaPorLetra; // true si la definitiva viene como "A"
     private String tipo; // puede ser null o vacío
 }

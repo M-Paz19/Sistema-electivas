@@ -6,7 +6,6 @@ import com.unicauca.fiet.sistema_electivas.common.exception.InvalidStateExceptio
 import com.unicauca.fiet.sistema_electivas.common.exception.ResourceNotFoundException;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.enums.EstadoPeriodoAcademico;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.enums.EstadoRespuestaFormulario;
-import com.unicauca.fiet.sistema_electivas.periodo_academico.mapper.PeriodoAcademicoMapper;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.model.PeriodoAcademico;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.model.RespuestasFormulario;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.repository.PeriodoAcademicoRepository;
@@ -20,6 +19,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.lang.Nullable;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class ProcesamientoValidacionServiceImpl implements  ProcesamientoValidacionService {
+public class ValidacionRespuestasFormsServiceImpl implements ValidacionRespuestasFormsService {
     @Autowired
     private RespuestasFormularioRepository respuestasRepository;
     @Autowired
@@ -171,7 +171,7 @@ public class ProcesamientoValidacionServiceImpl implements  ProcesamientoValidac
      */
     @Transactional
     @Override
-    public RespuestaFormularioDesicionResponse revisarManualFormatoInvalido(Long respuestaId, boolean incluir) {
+    public RespuestaFormularioDesicionResponse revisarManualFormatoInvalido(Long respuestaId, boolean incluir, @Nullable String nuevoCodigo) {
         // Buscar respuesta
         RespuestasFormulario respuesta = respuestasRepository.findById(respuestaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Respuesta no encontrada."));

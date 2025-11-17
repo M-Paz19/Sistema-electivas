@@ -1,6 +1,7 @@
 package com.unicauca.fiet.sistema_electivas.procesamiento_validacion.model;
 
 import com.unicauca.fiet.sistema_electivas.archivo.model.CargaArchivo;
+import com.unicauca.fiet.sistema_electivas.periodo_academico.model.RespuestasFormulario;
 import com.unicauca.fiet.sistema_electivas.plan_estudio.model.PlanEstudio;
 import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.enums.EstadoAptitud;
 import jakarta.persistence.*;
@@ -17,7 +18,8 @@ import java.math.BigDecimal;
 @Table(name = "datos_academicos")
 public class DatosAcademico {
     @Id
-    @ColumnDefault("nextval('datos_academicos_id_seq')")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "datos_academicos_seq")
+    @SequenceGenerator(name = "datos_academicos_seq", sequenceName = "datos_academicos_id_seq", allocationSize = 1)
     @Column(name = "id", nullable = false)
     private Long id;
 
@@ -55,7 +57,7 @@ public class DatosAcademico {
     private Integer periodosMatriculados;
 
     @NotNull
-    @Column(name = "promedio_carrera", nullable = false, precision = 5, scale = 2)
+    @Column(name = "promedio_carrera", nullable = false, precision = 6, scale = 3)
     private BigDecimal promedioCarrera;
 
     @NotNull
@@ -80,4 +82,8 @@ public class DatosAcademico {
     @JoinColumn(name = "archivo_cargado_id", nullable = false)
     private CargaArchivo archivoCargado;
 
+    @NotNull
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "respuesta_id", nullable = false)
+    private RespuestasFormulario respuesta;
 }

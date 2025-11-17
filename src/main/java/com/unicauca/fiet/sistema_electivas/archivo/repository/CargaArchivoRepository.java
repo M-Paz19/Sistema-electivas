@@ -3,6 +3,7 @@ package com.unicauca.fiet.sistema_electivas.archivo.repository;
 
 import com.unicauca.fiet.sistema_electivas.archivo.enums.TipoArchivo;
 import com.unicauca.fiet.sistema_electivas.archivo.model.CargaArchivo;
+import com.unicauca.fiet.sistema_electivas.periodo_academico.model.PeriodoAcademico;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -27,4 +28,6 @@ public interface CargaArchivoRepository extends JpaRepository<CargaArchivo, Long
      * @return lista de archivos que coinciden con los criterios
      */
     List<CargaArchivo> findByPeriodoIdAndTipoArchivo(Long periodoId, TipoArchivo tipoArchivo);
+    int countByPeriodoAndTipoArchivo(PeriodoAcademico periodo, TipoArchivo tipoArchivo);
+
 }

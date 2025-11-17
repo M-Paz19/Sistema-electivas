@@ -30,10 +30,14 @@ public enum EstadoRespuestaFormulario {
     DESCARTADO("descartado manualmente"),
     INCLUIDO("incluido manualmente"),
 
-    INCONSISTENTE_SIMCA("El código del CSV no se encontró en las respuestas válidas"),
+    INCONSISTENTE_SIMCA("El codigo estudiantil no aparece existe o esta inactivo, sin información válida en SIMCA."),
     CORREGIDO("El código era INCONSISTENTE, pero fue corregido manualmente"),
+    DATOS_NO_CARGADOS("El código de la respuesta no se encontro en el archivo de SIMCA cargado"),
+    DESCARTADO_SIMCA("El código no existe, no se encontró o está inactivo según los datos de SIMCA."),
     FORZAR_INCLUSION("Se forzó la inclusión de un estudiante que era inconsistente"),
-    DATOS_CARGADOS("El formulario fue procesado y sus datos académicos");
+    PROGRAMA_NO_ENCONTRADO("No se encontró un programa registrado que coincida con los datos suministrados por SIMCA."),
+    PLAN_NO_ENCONTRADO("Se encontró el programa, pero no existe un plan de estudios activo o apropiado para el año de ingreso."),
+    DATOS_CARGADOS("Se cargaron sus datos academicos para la respuesta del formulario");
 
 
     private final String descripcion;

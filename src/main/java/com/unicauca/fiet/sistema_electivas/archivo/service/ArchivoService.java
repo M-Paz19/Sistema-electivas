@@ -52,4 +52,13 @@ public interface ArchivoService {
      * @return El nombre único (UUID + extensión) con el que se guardó el archivo.
      */
     String guardarArchivo(MultipartFile archivo, String tipo);
+    /**
+     * Guarda un archivo Excel de datos académicos (SIMCA),
+     * lo registra en la tabla carga_archivo y retorna la entidad guardada.
+     *
+     * @param archivo archivo Excel cargado por el usuario
+     * @param periodo período académico asociado
+     * @return la entidad CargaArchivo registrada
+     */
+    CargaArchivo guardarArchivoDatosAcademicos(MultipartFile archivo, PeriodoAcademico periodo);
 }

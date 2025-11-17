@@ -2,14 +2,14 @@ package com.unicauca.fiet.sistema_electivas.procesamiento_validacion.service;
 
 import com.unicauca.fiet.sistema_electivas.common.exception.InvalidStateException;
 import com.unicauca.fiet.sistema_electivas.common.exception.ResourceNotFoundException;
-import com.unicauca.fiet.sistema_electivas.periodo_academico.model.RespuestasFormulario;
 import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.dto.CambioEstadoValidacionResponse;
 import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.dto.RespuestaFormularioDesicionResponse;
 import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.dto.RespuestaFormularioResponse;
+import org.springframework.lang.Nullable;
 
 import java.util.List;
 
-public interface ProcesamientoValidacionService {
+public interface ValidacionRespuestasFormsService {
     /**
      * Obtiene todas las respuestas asociadas a un período académico específico.
      *
@@ -81,7 +81,7 @@ public interface ProcesamientoValidacionService {
      * @throws ResourceNotFoundException Si no se encuentra la respuesta con el ID indicado.
      * @throws InvalidStateException Si la respuesta no se encuentra en estado {@code FORMATO_INVALIDO}.
      */
-    RespuestaFormularioDesicionResponse revisarManualFormatoInvalido(Long respuestaId, boolean incluir);
+    RespuestaFormularioDesicionResponse revisarManualFormatoInvalido(Long respuestaId, boolean incluir,  @Nullable String nuevoCodigo);
 
     /**
      * Confirma la lista final de estudiantes para la fase de validación con SIMCA.

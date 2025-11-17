@@ -102,9 +102,12 @@ public class ExcelHistorialAcademicoServiceImpl implements ExcelHistorialAcademi
                 String nombre = getCellString(row, headerIndex.get("materia"), formatter);
                 Integer creditos = getCellInteger(row, headerIndex.get("créditos"));
                 Integer semestre = getCellInteger(row, headerIndex.get("semestre"));
-                Double nota = getCellDouble(row, headerIndex.get("nota"));
-                Double habilitacion = getCellDouble(row, headerIndex.get("habilitación"));
+                String nota = getCellString(row, headerIndex.get("nota"),formatter);
+                String habilitacion = getCellString(row, headerIndex.get("habilitación"),formatter);
+                String definitivaRaw = getCellString(row, headerIndex.get("definitiva"), formatter);
+
                 Double definitiva = getCellDouble(row, headerIndex.get("definitiva"));
+                boolean aprobadaPorLetra = "A".equalsIgnoreCase(definitivaRaw);
                 String tipo = getCellString(row, headerIndex.get("tipo"), formatter);
 
                 if ((nombre == null || nombre.isBlank()) && (creditos == null || semestre == null)) {
@@ -121,6 +124,7 @@ public class ExcelHistorialAcademicoServiceImpl implements ExcelHistorialAcademi
                 materia.setHabilitacion(habilitacion);
                 materia.setDefinitiva(definitiva);
                 materia.setTipo(tipo);
+                materia.setAprobadaPorLetra(aprobadaPorLetra);
 
                 materias.add(materia);
             }
@@ -200,7 +204,11 @@ public class ExcelHistorialAcademicoServiceImpl implements ExcelHistorialAcademi
                 return cell.getNumericCellValue();
             } else {
                 String s = cell.toString().trim().replace(",", ".");
-                return Double.parseDouble(s);
+                // Solo parseamos si realmente es número
+                if (s.matches("^-?\\d+(\\.\\d+)?$")) {
+                    return Double.parseDouble(s);
+                }
+                return null;
             }
         } catch (Exception e) {
             return null;

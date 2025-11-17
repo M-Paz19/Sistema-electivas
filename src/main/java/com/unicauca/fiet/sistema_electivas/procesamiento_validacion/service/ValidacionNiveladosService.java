@@ -1,8 +1,13 @@
 package com.unicauca.fiet.sistema_electivas.procesamiento_validacion.service;
 
+import com.unicauca.fiet.sistema_electivas.common.exception.InvalidStateException;
+import com.unicauca.fiet.sistema_electivas.common.exception.ResourceNotFoundException;
+import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.dto.DatosAcademicoResponse;
 import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.dto.ValidacionNiveladoResponseDTO;
 import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.dto.VerificacionNiveladoDTO;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 public interface ValidacionNiveladosService {
 
@@ -27,5 +32,30 @@ public interface ValidacionNiveladosService {
      * @param niveladoFinal true si el estudiante se considera nivelado, false en caso contrario
      * @return DTO con el resultado de la decisión
      */
-    ValidacionNiveladoResponseDTO registrarDecisionFinal(Long idDatosAcademicos, boolean niveladoFinal);
+    DatosAcademicoResponse registrarDecisionFinal(Long idDatosAcademicos, boolean niveladoFinal);
+    /**
+     * HU 2.2.1.1 / 2.2.1.2: Preselección automática de posibles nivelados.
+     *
+     * <p>Identifica a los estudiantes que cumplen los criterios mínimos de
+     * nivelación definidos en las reglas del plan de estudios (minCreditosAprobados
+     * y maxPeriodosMatriculados). Solo puede ejecutarse cuando el período está en
+     * estado <b>PROCESO_CARGA_SIMCA</b>.</p>
+     *
+     * <p>El proceso realiza:</p>
+     * <ul>
+     *     <li>Validación del estado del período.</li>
+     *     <li>Obtención de todos los registros de datos académicos cargados.</li>
+     *     <li>Evaluación de cada estudiante frente a las reglas de su plan.</li>
+     *     <li>Marcación como <b>POSIBLE_NIVELADO</b> si cumple al menos una regla.</li>
+     *     <li>Transición del período a <b>PROCESO_REVISION_POTENCIALES_NIVELADOS</b>.</li>
+     *     <li>Retorno del listado de estudiantes preseleccionados.</li>
+     * </ul>
+     *
+     * @param idPeriodo ID del período académico.
+     * @return lista de estudiantes candidatos a nivelación representados como {@link DatosAcademicoResponse}.
+     *
+     * @throws ResourceNotFoundException si el período no existe.
+     * @throws InvalidStateException si el período no está en estado PROCESO_CARGA_SIMCA.
+     */
+    List<DatosAcademicoResponse> preseleccionarNivelados(Long idPeriodo);
 }

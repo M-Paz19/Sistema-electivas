@@ -13,6 +13,5 @@ public class MateriaComparadaDTO {
     private int semestre;
     private boolean obligatoria;
     private boolean aprobada;
-    private Double nota;
     private String observacion; // "Aprobada", "No encontrada", "Nombre similar", etc.
 }

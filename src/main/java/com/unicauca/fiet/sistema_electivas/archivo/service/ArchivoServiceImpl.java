@@ -219,6 +219,64 @@ public class ArchivoServiceImpl implements ArchivoService {
     }
 
 
+    /**
+     * Guarda un archivo Excel de datos académicos (SIMCA),
+     * lo registra en la tabla carga_archivo y retorna la entidad guardada.
+     *
+     * @param archivo archivo Excel cargado por el usuario
+     * @param periodo período académico asociado
+     * @return la entidad CargaArchivo registrada
+     */
+    @Override
+    @Transactional
+    public CargaArchivo guardarArchivoDatosAcademicos(MultipartFile archivo, PeriodoAcademico periodo) {
+        try {
+            String originalFilename = StringUtils.cleanPath(archivo.getOriginalFilename());
+            String extension = StringUtils.getFilenameExtension(originalFilename);
+
+            if (originalFilename.contains("..")) {
+                throw new BusinessException("El nombre del archivo contiene una secuencia de ruta inválida: " + originalFilename);
+            }
+
+            // Contar cuántos archivos de tipo DATOS_ACADEMICOS hay ya cargados para este período
+            int existentes = cargaArchivoRepository.countByPeriodoAndTipoArchivo(periodo, TipoArchivo.DATOS_ACADEMICOS);
+
+            // Generar nombre legible y controlado
+            String nombreArchivo = String.format(
+                    "DatosAcademicos_Periodo_%s_Parte_%d_%s.%s",
+                    periodo.getSemestre(),
+                    existentes + 1,
+                    LocalDate.now(),
+                    extension
+            );
+
+            // Ruta base (ya definida en el constructor)
+            Path targetLocation = this.datos_academicos.resolve(nombreArchivo);
+
+            // Guardar físicamente
+            Files.copy(archivo.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+
+            // Registrar en BD
+            CargaArchivo carga = new CargaArchivo();
+            carga.setPeriodo(periodo);
+            carga.setTipoArchivo(TipoArchivo.DATOS_ACADEMICOS);
+            carga.setNombreArchivo(nombreArchivo);
+            carga.setRutaAlmacenamiento(targetLocation.toString());
+            carga.setFechaCarga(Instant.now());
+            carga.setEstado(EstadoArchivo.CARGADO);
+
+            cargaArchivoRepository.save(carga);
+            log.info("Archivo SIMCA [{}] guardado correctamente en {}", nombreArchivo, targetLocation);
+
+            return carga;
+
+        } catch (IOException e) {
+            log.error("Error al guardar archivo de datos académicos SIMCA: {}", e.getMessage());
+            throw new RuntimeException("No se pudo guardar el archivo de datos académicos.", e);
+        }
+    }
+
+
     @Override
     public String guardarArchivo(MultipartFile file, String tipo) {
         // Limpiar el nombre del archivo

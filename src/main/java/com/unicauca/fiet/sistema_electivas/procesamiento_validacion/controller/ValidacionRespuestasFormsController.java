@@ -1,9 +1,11 @@
 package com.unicauca.fiet.sistema_electivas.procesamiento_validacion.controller;
 
 import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.dto.CambioEstadoValidacionResponse;
+import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.dto.CorregirCodigoRequest;
 import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.dto.RespuestaFormularioDesicionResponse;
 import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.dto.RespuestaFormularioResponse;
-import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.service.ProcesamientoValidacionServiceImpl;
+import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.service.ValidacionRespuestasFormsServiceImpl;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,9 +22,9 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/procesamiento")
 @RequiredArgsConstructor
-public class ProcesamientoValidacionController {
+public class ValidacionRespuestasFormsController {
 
-    private final ProcesamientoValidacionServiceImpl procesamientoService;
+    private final ValidacionRespuestasFormsServiceImpl procesamientoService;
 
 
     /**
@@ -93,10 +95,12 @@ public class ProcesamientoValidacionController {
     @PostMapping("/respuestas/{respuestaId}/revision-manual")
     public ResponseEntity<RespuestaFormularioDesicionResponse> revisarManualFormatoInvalido(
             @PathVariable Long respuestaId,
-            @RequestParam boolean incluir
+            @RequestParam boolean incluir,
+            @Valid @RequestBody CorregirCodigoRequest request
     ) {
         RespuestaFormularioDesicionResponse response =
-                procesamientoService.revisarManualFormatoInvalido(respuestaId, incluir);
+                procesamientoService.revisarManualFormatoInvalido(respuestaId, incluir, request.getNuevoCodigo());
+
         return ResponseEntity.ok(response);
     }
 

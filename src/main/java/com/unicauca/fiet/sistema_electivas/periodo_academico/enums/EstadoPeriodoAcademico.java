@@ -26,6 +26,9 @@ public enum EstadoPeriodoAcademico {
     PROCESO_CONFIRMACION_SIMCA("Confirmación final para SIMCA", true),
     PROCESO_CARGA_SIMCA("Carga de datos SIMCA", true),
 
+    PROCESO_REVISION_POTENCIALES_NIVELADOS("Revisión de posibles nivelados (preselección automática)", true),
+    PROCESO_CALCULO_AVANCE("Cálculo del porcentaje de avance académico de todos los estudiantes", true),
+    PROCESO_CALCULO_APTITUD("Determinación final de aptitud para asignación de electivas", true),
 
 
     EN_PROCESO_ASIGNACION("Asignación de electivas en curso", true),

@@ -3,6 +3,8 @@ package com.unicauca.fiet.sistema_electivas.programa.repository;
 import com.unicauca.fiet.sistema_electivas.programa.enums.EstadoPrograma;
 import com.unicauca.fiet.sistema_electivas.programa.model.Programa;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -65,4 +67,14 @@ public interface ProgramaRepository extends JpaRepository<Programa, Long> {
      * @return el programa opcional encontrado
      */
     Optional<Programa> findByNombreIgnoreCase(String nombre);
+
+    @Query("""
+    SELECT p FROM Programa p
+    WHERE CAST(function('unaccent', lower(p.nombre)) AS string)
+          LIKE CAST(function('unaccent', lower(CONCAT('%', :nombre, '%'))) AS string)
+      AND p.estado = :estado
+""")
+    Optional<Programa> buscarFlexible(String nombre, EstadoPrograma estado);
+
+
 }

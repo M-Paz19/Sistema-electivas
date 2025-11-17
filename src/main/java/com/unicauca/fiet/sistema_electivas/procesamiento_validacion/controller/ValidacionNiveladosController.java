@@ -1,12 +1,14 @@
 package com.unicauca.fiet.sistema_electivas.procesamiento_validacion.controller;
 
-import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.dto.ValidacionNiveladoResponseDTO;
+import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.dto.DatosAcademicoResponse;
 import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.dto.VerificacionNiveladoDTO;
 import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.service.ValidacionNiveladosService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 /**
  * Controlador para el módulo de validación de nivelados.
@@ -22,6 +24,19 @@ public class ValidacionNiveladosController {
 
     private final ValidacionNiveladosService validacionNiveladosService;
 
+    /**
+     * HU 2.2.1: Preselecciona y devuelve una lista de 'Posibles Nivelados'.
+     * Es un POST porque esta acción modifica el estado de los estudiantes
+     * en la base de datos (los marca como POSIBLE_NIVELADO).
+     *
+     * @param periodoId ID del período académico.
+     * @return Lista de DTO de los estudiantes marcados como posibles nivelados.
+     */
+    @PostMapping("/periodos/{periodoId}/preseleccionar-nivelados")
+    public ResponseEntity<List<DatosAcademicoResponse>> preseleccionarNivelados(@PathVariable Long periodoId) {
+        List<DatosAcademicoResponse> response = validacionNiveladosService.preseleccionarNivelados(periodoId);
+        return ResponseEntity.ok(response);
+    }
     /**
      * Genera un reporte visual de nivelación para un estudiante.
      *
@@ -52,14 +67,14 @@ public class ValidacionNiveladosController {
      *
      * @param idDatosAcademicos ID del estudiante (registro de datos académicos)
      * @param nivelado indica si el estudiante se considera finalmente nivelado
-     * @return {@link ValidacionNiveladoResponseDTO} con el resultado de la decisión
+     * @return {@link DatosAcademicoResponse} con el resultado de la decisión
      */
     @PostMapping("/decision-final/{idDatosAcademicos}")
-    public ResponseEntity<ValidacionNiveladoResponseDTO> registrarDecisionFinal(
+    public ResponseEntity<DatosAcademicoResponse> registrarDecisionFinal(
             @PathVariable Long idDatosAcademicos,
             @RequestParam("nivelado") boolean nivelado) {
 
-        ValidacionNiveladoResponseDTO resultado = validacionNiveladosService
+        DatosAcademicoResponse resultado = validacionNiveladosService
                 .registrarDecisionFinal(idDatosAcademicos, nivelado);
 
         return ResponseEntity.ok(resultado);

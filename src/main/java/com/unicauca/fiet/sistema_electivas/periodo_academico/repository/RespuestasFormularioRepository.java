@@ -28,8 +28,31 @@ public interface RespuestasFormularioRepository  extends JpaRepository<Respuesta
     })
     List<RespuestasFormulario> findByPeriodoId(Long periodoId);
 
+    /**
+     * Obtiene todas las respuestas que se encuentren en un estado específico,
+     * sin filtrarlas por período académico.
+     *
+     * @param estadoRespuestaFormulario estado requerido.
+     * @return lista de respuestas que coinciden con el estado.
+     */
     List<RespuestasFormulario> findByEstado(EstadoRespuestaFormulario estadoRespuestaFormulario);
 
+    /**
+     * Obtiene todas las respuestas de un período académico filtradas por un estado
+     * específico.
+     *
+     * Genera internamente:
+     * <pre>
+     * SELECT r
+     * FROM RespuestasFormulario r
+     * WHERE r.periodo.id = :periodoId
+     *   AND r.estado = :estado
+     * </pre>
+     *
+     * @param periodoId ID del período.
+     * @param estado estado de la respuesta.
+     * @return lista filtrada de respuestas.
+     */
     List<RespuestasFormulario> findByPeriodoIdAndEstado(Long periodoId, EstadoRespuestaFormulario estado);
 
     /**
@@ -53,5 +76,36 @@ public interface RespuestasFormularioRepository  extends JpaRepository<Respuesta
     long countByPeriodoIdAndEstadoIn(Long periodoId, List<EstadoRespuestaFormulario> estados);
     List<RespuestasFormulario> findByPeriodoIdAndEstadoIn(Long periodoId, List<EstadoRespuestaFormulario> estados);
 
-    Optional<RespuestasFormulario> findByCodigoEstudiante(String codigoEstudiante);
+    /**
+     * Verifica si existe una respuesta para un período académico con un código
+     * de estudiante específico, siempre que la respuesta se encuentre en el estado
+     * indicado.
+     *
+     * <p>Usado para evitar duplicados al corregir inconsistencias o cargar datos
+     * manualmente.</p>
+     *
+     * @param periodoId ID del período.
+     * @param codigoEstudiante código del estudiante.
+     * @param estado estado a validar.
+     * @return true si existe una coincidencia.
+     */
+    boolean existsByPeriodoIdAndCodigoEstudianteAndEstado(
+            Long periodoId,
+            String codigoEstudiante,
+            EstadoRespuestaFormulario estado
+    );
+
+    /**
+     * Verifica si existe al menos una respuesta para un período académico
+     * que se encuentre en alguno de los estados proporcionados.
+     *
+     * <p>Usado para evaluar si un período puede avanzar al siguiente estado.</p>
+     *
+     * @param periodoId ID del período académico.
+     * @param estados lista de estados válidos.
+     * @return true si hay alguna respuesta en esos estados.
+     */
+    boolean existsByPeriodoIdAndEstadoIn(Long periodoId, List<EstadoRespuestaFormulario> estados);
+
+
 }

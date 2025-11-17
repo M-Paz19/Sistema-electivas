@@ -16,10 +16,9 @@ public class VerificacionNiveladoDTO {
     private String codigoEstudiante;
     private String nombre;
     private String programa;
-    private Integer semestresMatriculados;
 
     private boolean nivelado;
-    private BigDecimal porcentajeAvance;
+    private Integer semestreVerificado;
     private String mensajeResumen;
     private List<MateriaComparadaDTO> comparacionMaterias;
 }

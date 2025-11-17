@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream; // Importar InputStream
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -128,14 +129,22 @@ public class SimcaCsvParserService {
                     listaDatos.add(datos);
 
                 } catch (Exception e) {
-                    System.err.println("Error procesando fila de Excel: " + i + " | Error: " + e.getMessage());
+                    throw new BusinessException("Error procesando fila de Excel: " + (i+1) + " | Error: " + e.getMessage());
                     // Continuar con la siguiente fila
                 }
             }
-        } catch (Exception e) {
-            throw new BusinessException("Error procesando el archivo. Asegúrese de que sea un archivo Excel (.xls o .xlsx) válido.");
-        }
+        }  catch (BusinessException e) {
+            // Propagar tal cual, no envolver
+            throw e;
 
+        } catch (Exception e) {
+            // Este es el catch general solo para errores reales del archivo
+            throw new BusinessException(
+                    "Error procesando el archivo '" + archivo.getOriginalFilename() +
+                            "'. Asegúrese de que sea un archivo Excel (.xls o .xlsx) válido. " +
+                            "Detalle: " + e.getMessage()
+            );
+        }
         return listaDatos;
     }
 
@@ -173,22 +182,82 @@ public class SimcaCsvParserService {
     }
 
     /**
-     * Obtiene el valor de una celda numérica como BigDecimal.
+     * Obtiene el valor de una celda como BigDecimal y valida:
+     *  - Sea número válido
+     *  - Máximo 3 decimales
+     *  - Rango permitido: 0.000 a 5.000
      */
     private BigDecimal getCellBigDecimal(Row row, Integer colIndex) {
         if (colIndex == null) return null;
+
         Cell cell = row.getCell(colIndex);
         if (cell == null) return null;
+
+        int fila = row.getRowNum() + 1; // fila 1-based
+
         try {
+
+            BigDecimal bd;
+
+            // -------------------------------
+            // CASO 1: Valor numérico puro
+            // -------------------------------
             if (cell.getCellType() == CellType.NUMERIC) {
-                return BigDecimal.valueOf(cell.getNumericCellValue());
-            } else {
-                // Manejar comas decimales (ej. 3,685)
-                String s = cell.toString().trim().replace(",", ".");
-                return new BigDecimal(s);
+                bd = BigDecimal.valueOf(cell.getNumericCellValue());
             }
+
+            // -------------------------------
+            // CASO 2: Valor en texto
+            // -------------------------------
+            else {
+                String raw = cell.getStringCellValue().trim();
+                if (raw.isBlank()) return null;
+
+                raw = raw.replace(",", ".");
+
+                try {
+                    bd = new BigDecimal(raw);
+                } catch (NumberFormatException e) {
+                    throw new BusinessException(
+                            "Error en fila " + fila +
+                                    ": el valor '" + raw + "' no es un número válido."
+                    );
+                }
+            }
+
+            // -------------------------------
+            // VALIDACIÓN: Máximo 3 decimales
+            // -------------------------------
+            if (bd.scale() > 3) {
+                throw new BusinessException(
+                        " el promedio (" + bd + ") tiene más de 3 decimales. Máximo permitido: 3."
+                );
+            }
+
+            // -------------------------------
+            // VALIDACIÓN: Rango permitido
+            // -------------------------------
+            BigDecimal min = new BigDecimal("0.000");
+            BigDecimal max = new BigDecimal("5.000");
+
+            if (bd.compareTo(min) < 0 || bd.compareTo(max) > 0) {
+                throw new BusinessException(
+                        " el promedio (" + bd + ") está fuera del rango permitido (0.000 - 5.000)."
+                );
+            }
+
+            // Normalización final a 3 decimales
+            return bd.setScale(3, RoundingMode.HALF_UP);
+
+        } catch (BusinessException e) {
+            throw e; // se relanza
         } catch (Exception e) {
-            return null;
+            throw new BusinessException(
+                    "Error procesando promedio en la fila " + fila +
+                            ". Valor recibido: '" + cell.toString() + "'"
+            );
         }
     }
+
+
 }
