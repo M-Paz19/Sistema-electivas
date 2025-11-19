@@ -45,6 +45,14 @@ public interface PlanEstudioService {
     List<PlanEstudioListResponse> listarPlanesPorPrograma(Long programaId, @Nullable EstadoPlanEstudio estado);
 
     /**
+     * Lista todos los planes de estudio, con opción de filtrar por estado.
+     *
+     * @param estado (opcional) Estado del plan.
+     * @return Lista de {@link PlanEstudioListResponse}.
+     */
+    List<PlanEstudioListResponse> listarTodosLosPlanes(@Nullable EstadoPlanEstudio estado);
+
+    /**
      * Actualiza la información de un plan de estudio existente según su estado.
      *
      * <p>Reglas de edición:

@@ -12,6 +12,7 @@ package com.unicauca.fiet.sistema_electivas.procesamiento_validacion.enums;
  *   <li><b>AVANCE_CALCULADO:</b> Se calculó el porcentaje de avance para los estudiantes no nivelados.</li>
  *   <li><b>APTO:</b> El estudiante cumple los requisitos (Avance > 65% y Semestres ≥ 7) o ha sido marcado como nivelado.</li>
  *   <li><b>NO_APTO:</b> El estudiante no cumple los requisitos establecidos para ser apto.</li>
+ *   <li><b>EXCLUIDO_POR_ELECTIVAS:</b> El estudiante ya cursó todas las electivas y no puede postular a más.</li>
  * </ul>
  */
 public enum EstadoAptitud {
@@ -22,7 +23,8 @@ public enum EstadoAptitud {
     NIVELADO_DESCARTADO("Nivelado descartado"),
     AVANCE_CALCULADO("Porcentaje de avance calculado"),
     APTO("Cumple los requisitos de aptitud"),
-    NO_APTO("No cumple los requisitos de aptitud");
+    NO_APTO("No cumple los requisitos de aptitud"),
+    EXCLUIDO_POR_ELECTIVAS("El estudiante ya cursó todas las electivas");
 
     private final String descripcion;
 
@@ -34,3 +36,4 @@ public enum EstadoAptitud {
         return descripcion;
     }
 }
+

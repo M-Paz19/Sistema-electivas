@@ -65,5 +65,13 @@ public interface PlanEstudioRepository extends JpaRepository<PlanEstudio, Long> 
      */
     Optional<PlanEstudio> findByPrograma_Nombre(String nombrePrograma);
 
+    /**
+     * Lista los planes de estudio filtrando por estado.
+     *
+     * @param estado   estado del plan de estudio
+     * @return lista filtrada de planes
+     */
+    List<PlanEstudio> findByEstado(EstadoPlanEstudio estado);
+
 
 }

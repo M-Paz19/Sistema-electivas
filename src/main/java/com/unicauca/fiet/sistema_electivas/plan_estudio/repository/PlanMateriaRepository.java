@@ -15,10 +15,10 @@ public interface PlanMateriaRepository extends JpaRepository<PlanMateria, Long> 
     /**
      * Obtiene todas las materias de un plan de estudios.
      *
-     * @param planEstudioId ID del plan de estudios
+     * @param planEstudio plan de estudios
      * @return lista de materias asociadas al plan
      */
-    List<PlanMateria> findByPlanEstudios_Id(Long planEstudioId);
+    List<PlanMateria> findByPlanEstudios(PlanEstudio planEstudio);
 
     /**
      * Obtiene las materias de un plan de estudios hasta un semestre específico (inclusive),

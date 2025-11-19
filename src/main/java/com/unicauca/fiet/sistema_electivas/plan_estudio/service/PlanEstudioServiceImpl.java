@@ -60,7 +60,7 @@ public class PlanEstudioServiceImpl implements PlanEstudioService {
         try {
             Integer.parseInt(request.getVersion());
         } catch (NumberFormatException e) {
-            throw new BusinessException("El id del pensum debe ser un número entero (ejemplo: 544).");
+            throw new BusinessException("La version del plan debe ser un número entero (ejemplo: 544).");
         }
         // Validar año de inicio
         Integer anio = request.getAnioInicio();
@@ -98,7 +98,23 @@ public class PlanEstudioServiceImpl implements PlanEstudioService {
                 : planEstudioRepository.findByProgramaAndEstado(programa, estado);
 
         return planes.stream()
-                .map(PlanEstudioMapper::toListResponse) // ✅ uso directo del mapper
+                .map(PlanEstudioMapper::toListResponse) // uso directo del mapper
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<PlanEstudioListResponse> listarTodosLosPlanes(@Nullable EstadoPlanEstudio estado) {
+
+        List<PlanEstudio> planes = (estado == null)
+                ? planEstudioRepository.findAll()
+                : planEstudioRepository.findByEstado(estado);
+
+        return planes.stream()
+                .map(PlanEstudioMapper::toListResponse)
                 .collect(Collectors.toList());
     }
 

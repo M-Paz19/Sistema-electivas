@@ -69,7 +69,7 @@ public class DatosAcademico {
     private Boolean esNivelado = false;
 
     @NotNull
-    @Column(name = "porcentaje_avance", nullable = false, precision = 5, scale = 2)
+    @Column(name = "porcentaje_avance", nullable = false, precision = 7, scale = 4)
     private BigDecimal porcentajeAvance;
 
     @NotNull

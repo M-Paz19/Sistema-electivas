@@ -94,6 +94,22 @@ public interface DatosAcademicoRepository extends JpaRepository<DatosAcademico, 
             Long periodoId,
             List<EstadoAptitud> estados
     );
+    /**
+     * Obtiene todos los registros de DatosAcadémicos asociados a un período académico
+     * específico y que tengan exactamente el estado de aptitud indicado.
+     *
+     * <p>Esta consulta permite recuperar, por ejemplo, todos los estudiantes
+     * con estado APTO, NO_APTO, EXCLUIDO_POR_ELECTIVAS, etc., pertenecientes
+     * a un periodo dado.</p>
+     *
+     * @param periodoId       ID del período académico.
+     * @param estadoAptitud   Estado de aptitud que se desea filtrar.
+     * @return Lista de entidades {@link DatosAcademico} que cumplen el filtro.
+     */
+    List<DatosAcademico> findByRespuesta_PeriodoIdAndEstadoAptitud(
+            Long periodoId,
+            EstadoAptitud estadoAptitud
+    );
 
 }
 

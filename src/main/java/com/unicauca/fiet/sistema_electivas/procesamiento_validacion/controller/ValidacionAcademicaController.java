@@ -162,8 +162,6 @@ public class ValidacionAcademicaController {
      *   <li>Si no cumple las condiciones → NO_APTO.</li>
      * </ul>
      *
-     * <p>Al finalizar, el período cambia a estado
-     * {@code PROCESO_PUBLICACION}.</p>
      *
      * @param periodoId ID del período académico.
      * @return ResponseEntity con un resumen del proceso.

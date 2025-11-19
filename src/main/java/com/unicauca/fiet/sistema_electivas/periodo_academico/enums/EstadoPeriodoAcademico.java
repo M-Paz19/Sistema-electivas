@@ -30,7 +30,7 @@ public enum EstadoPeriodoAcademico {
     PROCESO_CALCULO_AVANCE("Cálculo del porcentaje de avance académico de todos los estudiantes", true),
     PROCESO_CALCULO_APTITUD("Determinación final de aptitud para asignación de electivas", true),
 
-
+    PROCESO_FILTRADO_NO_ELEGIBLES("Filtrado de estudiantes no elegibles, ya vieron todas las electivas de su plan", true),
     EN_PROCESO_ASIGNACION("Asignación de electivas en curso", true),
     CERRADO("Periodo cerrado - asignaciones completadas", false);
 

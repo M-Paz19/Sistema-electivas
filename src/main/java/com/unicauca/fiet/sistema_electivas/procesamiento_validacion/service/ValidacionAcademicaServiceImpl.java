@@ -718,7 +718,13 @@ public class ValidacionAcademicaServiceImpl implements ValidacionAcademicaServic
                     int creditosEstudianteAjustados = dato.getCreditosAprobados() - (dato.getAprobadas() * 3);
 
                     double porcentajeCalc = ((double) creditosEstudianteAjustados / totalAjustado) * 100.0;
-                    porcentajeAvance = BigDecimal.valueOf(porcentajeCalc).setScale(2, RoundingMode.HALF_UP);
+
+                    porcentajeAvance = BigDecimal.valueOf(porcentajeCalc).setScale(4, RoundingMode.HALF_UP);
+
+                    // asegurar que no supere 100
+                    if (porcentajeAvance.compareTo(BigDecimal.valueOf(100)) > 0) {
+                        porcentajeAvance = BigDecimal.valueOf(100);
+                    }
                 }
 
                 dato.setPorcentajeAvance(porcentajeAvance);
@@ -815,7 +821,7 @@ public class ValidacionAcademicaServiceImpl implements ValidacionAcademicaServic
         }
 
         // 4. Actualizar estado del período
-        periodo.setEstado(EstadoPeriodoAcademico.EN_PROCESO_ASIGNACION);
+        periodo.setEstado(EstadoPeriodoAcademico.PROCESO_FILTRADO_NO_ELEGIBLES);
         PeriodoAcademico actualizado = periodoRepository.save(periodo);
 
         // 5. Construir respuesta
