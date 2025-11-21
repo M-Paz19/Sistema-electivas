@@ -24,9 +24,9 @@ import java.util.*;
  *
  * <p>Acciones soportadas:
  * <ul>
- *   <li>Creación dinámica de formularios de preinscripción de electivas.</li>
- *   <li>Consulta y conversión de respuestas recibidas en estructuras manipulables.</li>
- *   <li>Cierre de formularios una vez finalizado el período de inscripción.</li>
+ * <li>Creación dinámica de formularios de preinscripción de electivas.</li>
+ * <li>Consulta y conversión de respuestas recibidas en estructuras manipulables.</li>
+ * <li>Cierre de formularios una vez finalizado el período de inscripción.</li>
  * </ul>
  * </p>
  */
@@ -46,9 +46,9 @@ public class GoogleFormsClient {
      *
      * <p>Acciones realizadas:
      * <ul>
-     *   <li>Consulta la API de Google Forms para obtener las respuestas.</li>
-     *   <li>Mapea cada respuesta a una entidad {@link RespuestasFormulario}.</li>
-     *   <li>Devuelve todas las respuestas en la base de datos asociadas al período correspondiente.</li>
+     * <li>Consulta la API de Google Forms para obtener las respuestas.</li>
+     * <li>Mapea cada respuesta a una entidad {@link RespuestasFormulario}.</li>
+     * <li>Devuelve todas las respuestas en la base de datos asociadas al período correspondiente.</li>
      * </ul>
      *
      * @param formId  ID del formulario de Google Forms.
@@ -98,15 +98,36 @@ public class GoogleFormsClient {
         Map<String, String> mapa = new HashMap<>();
 
         if (fr.getAnswers() != null) {
-            fr.getAnswers().forEach((id, ans) -> {
-                String pregunta = mapaPreguntas.get(id);
-                String respuesta = ans.getTextAnswers().getAnswers().get(0).getValue();
-                mapa.put(pregunta, respuesta);
+            fr.getAnswers().forEach((questionId, answer) -> {
+                String pregunta = mapaPreguntas.get(questionId);
+
+                // CORRECCIÓN: Validación defensiva para evitar IndexOutOfBoundsException
+                String respuestaTexto = "";
+                if (answer.getTextAnswers() != null
+                        && answer.getTextAnswers().getAnswers() != null
+                        && !answer.getTextAnswers().getAnswers().isEmpty()) {
+
+                    respuestaTexto = answer.getTextAnswers().getAnswers().get(0).getValue();
+                }
+
+                // Solo agregamos si tenemos la pregunta mapeada
+                if (pregunta != null) {
+                    mapa.put(pregunta, respuestaTexto);
+                }
             });
         }
 
         // 👇 Agregamos la fecha real del envío del formulario
         mapa.put("timestampRespuesta", fr.getLastSubmittedTime());
+
+        // Agregamos el email si está disponible (a veces viene fuera de las respuestas si se recolecta automáticamente)
+        if (fr.getRespondentEmail() != null) {
+            // Usamos la clave que espera tu parser: "Correo institucional"
+            // OJO: Si ya existe una pregunta con este nombre, esto podría sobrescribirla o duplicarla
+            // Es mejor verificar si ya vino en las respuestas.
+            mapa.putIfAbsent("Correo institucional", fr.getRespondentEmail());
+        }
+
         return mapa;
     }
 
@@ -211,21 +232,21 @@ public class GoogleFormsClient {
      */
     public void cerrarFormulario(String formId) {
         try {
-        // Crear el estado de publicación
-        PublishState publishState = new PublishState()
-                .setIsPublished(true).setIsAcceptingResponses(false); // Sigue visible, pero no acepta respuestas
+            // Crear el estado de publicación
+            PublishState publishState = new PublishState()
+                    .setIsPublished(true).setIsAcceptingResponses(false); // Sigue visible, pero no acepta respuestas
 
-        // Crear el objeto de configuración de publicación
-        PublishSettings publishSettings = new PublishSettings()
-                .setPublishState(publishState);
-        // Construir la solicitud
-        SetPublishSettingsRequest request = new SetPublishSettingsRequest()
-                .setPublishSettings(publishSettings);
+            // Crear el objeto de configuración de publicación
+            PublishSettings publishSettings = new PublishSettings()
+                    .setPublishState(publishState);
+            // Construir la solicitud
+            SetPublishSettingsRequest request = new SetPublishSettingsRequest()
+                    .setPublishSettings(publishSettings);
 
-        // Ejecutar la llamada a la API
-        formsService.forms().setPublishSettings(formId, request).execute();
+            // Ejecutar la llamada a la API
+            formsService.forms().setPublishSettings(formId, request).execute();
 
-        log.info("Formulario [{}] cerrado correctamente. Ya no acepta respuestas.", formId);
+            log.info("Formulario [{}] cerrado correctamente. Ya no acepta respuestas.", formId);
         } catch (Exception e) {
             throw new GoogleFormsException("Error al comunicarse con Google Forms", e);
         }

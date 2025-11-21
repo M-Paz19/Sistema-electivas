@@ -5,9 +5,9 @@ import com.unicauca.fiet.sistema_electivas.common.exception.InvalidStateExceptio
 import com.unicauca.fiet.sistema_electivas.common.exception.ResourceNotFoundException;
 import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.dto.*;
 import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.enums.EstadoAptitud;
-import org.jetbrains.annotations.Nullable;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
+import org.springframework.lang.Nullable;
 
 public interface ValidacionAcademicaService {
 
