@@ -3,6 +3,7 @@ package com.unicauca.fiet.sistema_electivas.asignacion.controller;
 import com.unicauca.fiet.sistema_electivas.asignacion.dto.EstudianteOrdenamientoResponse;
 import com.unicauca.fiet.sistema_electivas.asignacion.service.AsignacionService;
 
+import com.unicauca.fiet.sistema_electivas.asignacion.service.ConsultaAsignacionService;
 import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.dto.CambioEstadoValidacionResponse;
 import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.dto.DatosAcademicoResponse;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +26,7 @@ import java.util.List;
 public class AsignacionController {
 
     private final AsignacionService asignacionService;
-
+    private final ConsultaAsignacionService consultaAsignacionService;
     /**
      * HU 3.1.1 – Filtrado de estudiantes no elegibles.
      *
@@ -49,33 +50,26 @@ public class AsignacionController {
     }
 
     /**
-     * Endpoint para obtener la lista de estudiantes aptos ordenados para el proceso
-     * de asignación de electivas.
+     * Ejecuta el proceso de asignación masiva de electivas para todos los
+     * estudiantes aptos del período académico indicado.
      *
-     * <p>Este endpoint debe usarse únicamente cuando el período académico ya se
-     * encuentra en un estado que permite iniciar el algoritmo de asignación
-     * (por ejemplo: EN_ORDENAMIENTO_APTOS o EN_PROCESO_ASIGNACION, según tu flujo).</p>
+     * <p>Este proceso aplica el algoritmo completo de asignación,
+     * estudiante por estudiante, incluyendo asignación directa
+     * y recorridos de lista de espera.</p>
      *
-     * <p>Devuelve una lista de estudiantes cuyo estado_aptitud = APTO, ordenados
-     * aplicando los criterios oficiales:</p>
-     * <ul>
-     *   <li>Porcentaje de avance (DESC)</li>
-     *   <li>Promedio de carrera (DESC)</li>
-     *   <li>Electivas faltantes (ASC)</li>
-     * </ul>
-     *
-     * <p>El resultado es utilizado por el frontend para visualizar el orden exacto
-     * que seguirá el algoritmo de asignación.</p>
+     * <p>El período debe encontrarse en estado
+     * {@code EN_PROCESO_ASIGNACION} para poder ejecutar este proceso.</p>
      *
      * @param periodoId ID del período académico
-     * @return Lista ordenada de estudiantes aptos para asignación
+     * @return Resumen con el estado final del período y estadísticas del proceso
      */
-    @GetMapping("/periodos/{periodoId}/aptos/ordenados")
-    public ResponseEntity<List<EstudianteOrdenamientoResponse>> obtenerAptosOrdenados(
+    @PostMapping("/periodos/{periodoId}/procesar-asignacion")
+    public ResponseEntity<CambioEstadoValidacionResponse> procesarAsignacionMasiva(
             @PathVariable Long periodoId
     ) {
-        List<EstudianteOrdenamientoResponse> respuesta = asignacionService.obtenerAptosOrdenados(periodoId);
+        CambioEstadoValidacionResponse respuesta = asignacionService.procesarAsignacionMasiva(periodoId);
 
         return ResponseEntity.ok(respuesta);
     }
+
 }

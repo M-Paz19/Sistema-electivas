@@ -15,20 +15,32 @@ public interface AsignacionService {
      */
     CambioEstadoValidacionResponse filtrarEstudiantesNoElegibles(Long periodoId);
 
+
     /**
-     * Obtiene todos los estudiantes cuyo estado de aptitud es APTO dentro
-     * de un período académico, y los ordena aplicando los criterios oficiales:
+     * Procesa la asignación masiva de todos los estudiantes aptos de un período académico,
+     * aplicando el algoritmo oficial de asignación de electivas.
+     *
+     * <p>El flujo general del método es el siguiente:</p>
      * <ol>
-     *   <li>Porcentaje de avance (DESC)</li>
-     *   <li>Promedio de carrera (DESC)</li>
-     *   <li>Electivas faltantes (ASC)</li>
+     *     <li>Valida que el período exista y que su estado sea {@code EN_PROCESO_ASIGNACION}.</li>
+     *     <li>Obtiene y prepara en memoria todos los datos necesarios para la asignación:
+     *         estudiantes aptos, respuestas de formularios, opciones seleccionadas,
+     *         ofertas disponibles y cupos por programa/oferta.</li>
+     *     <li>Recorre la lista de estudiantes aptos y ejecuta la asignación individual
+     *         mediante la funcion procesar un estudiante para cada estudiante.</li>
+     *     <li>Registra errores de procesamiento por estudiante y mantiene un conteo de
+     *         asignaciones exitosas y fallidas.</li>
+     *     <li>Guarda todas las asignaciones realizadas en la base de datos y actualiza
+     *         el estado del período a {@code ASIGNACION_PROCESADA}.</li>
+     *     <li>Devuelve un objeto de respuesta con un resumen del proceso y el estado actualizado del período.</li>
      * </ol>
      *
-     * <p>El resultado es una lista de DTOs creada especialmente para mostrar
-     * en frontend todos los datos necesarios para la etapa de asignación.</p>
+     * <p>Nota: Este método es transaccional; cualquier error en la ejecución individual de un
+     * estudiante no interfiere con el procesamiento de los demás.</p>
      *
-     * @param periodoId ID del período académico en proceso
-     * @return Lista ordenada de estudiantes aptos, lista para asignación
+     * @param periodoId ID del período académico a procesar.
+     * @return {@link CambioEstadoValidacionResponse} que contiene el estado final del período
+     *         y un mensaje resumen del proceso.
      */
-    List<EstudianteOrdenamientoResponse> obtenerAptosOrdenados(Long periodoId);
+    CambioEstadoValidacionResponse procesarAsignacionMasiva(Long periodoId);
 }

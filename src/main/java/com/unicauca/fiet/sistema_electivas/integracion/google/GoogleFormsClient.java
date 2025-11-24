@@ -56,10 +56,10 @@ public class GoogleFormsClient {
      */
     public List<Map<String, String>> obtenerRespuestas(String formId) {
         try {
-            // 🔹 Obtener estructura del formulario
+            //  Obtener estructura del formulario
             Form form = formsService.forms().get(formId).execute();
 
-            // 🔹 Construir mapa de questionId → título de la pregunta
+            //  Construir mapa de questionId -> título de la pregunta
             Map<String, String> mapaPreguntas = new HashMap<>();
             for (Item item : form.getItems()) {
                 if (item.getQuestionItem() != null && item.getQuestionItem().getQuestion() != null) {
@@ -67,7 +67,7 @@ public class GoogleFormsClient {
                 }
             }
 
-            // 🔹 Obtener respuestas
+            //  Obtener respuestas
             ListFormResponsesResponse response = formsService.forms().responses().list(formId).execute();
             if (response.getResponses() == null) return Collections.emptyList();
 

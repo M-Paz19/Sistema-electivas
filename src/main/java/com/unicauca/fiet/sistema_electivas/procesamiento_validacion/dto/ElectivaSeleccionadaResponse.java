@@ -17,6 +17,6 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ElectivaSeleccionadaResponse {
-    private Short opcionNum;     // número de opción (1, 2, 3…)
+    private Integer opcionNum;     // número de opción (1, 2, 3…)
     private String nombreElectiva; // nombre de la electiva ofertada
 }

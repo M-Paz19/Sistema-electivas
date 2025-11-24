@@ -24,7 +24,10 @@ public enum EstadoAptitud {
     AVANCE_CALCULADO("Porcentaje de avance calculado"),
     APTO("Cumple los requisitos de aptitud"),
     NO_APTO("No cumple los requisitos de aptitud"),
-    EXCLUIDO_POR_ELECTIVAS("El estudiante ya cursó todas las electivas");
+    EXCLUIDO_POR_ELECTIVAS("El estudiante ya cursó todas las electivas"),
+
+    ASIGNACION_PROCESADA("Asignación de electivas completada"),
+    ASIGNACION_ERROR("Error durante la asignación de electivas");
 
     private final String descripcion;
 

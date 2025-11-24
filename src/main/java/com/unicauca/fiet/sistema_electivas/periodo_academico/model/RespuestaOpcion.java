@@ -24,7 +24,7 @@ public class RespuestaOpcion {
 
     @NotNull
     @Column(name = "opcion_num", nullable = false)
-    private Short opcionNum; // Ej: 1, 2, 3...
+    private Integer opcionNum; // Ej: 1, 2, 3...
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "oferta_id")

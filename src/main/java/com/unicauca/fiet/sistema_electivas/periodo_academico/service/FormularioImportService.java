@@ -110,7 +110,7 @@ public class FormularioImportService {
             respuestaRepository.save(r);
 
             // Crear opciones dinámicas
-            short num = 1;
+            int num = 1;
             for (String key : datos.keySet()) {
                 if (key.startsWith("Electiva opción")) {
                     String electivaTexto = datos.get(key);

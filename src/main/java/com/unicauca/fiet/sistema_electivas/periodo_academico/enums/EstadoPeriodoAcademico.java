@@ -32,6 +32,7 @@ public enum EstadoPeriodoAcademico {
 
     PROCESO_FILTRADO_NO_ELEGIBLES("Filtrado de estudiantes no elegibles, ya vieron todas las electivas de su plan", true),
     EN_PROCESO_ASIGNACION("Asignación de electivas en curso", true),
+    ASIGNACION_PROCESADA("Asignación de electivas finalizada", true),
     CERRADO("Periodo cerrado - asignaciones completadas", false);
 
     private final String descripcion;

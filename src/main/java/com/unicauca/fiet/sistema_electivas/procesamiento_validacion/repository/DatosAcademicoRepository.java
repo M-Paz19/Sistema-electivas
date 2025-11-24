@@ -5,6 +5,8 @@ import com.unicauca.fiet.sistema_electivas.periodo_academico.model.RespuestasFor
 import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.enums.EstadoAptitud;
 import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.model.DatosAcademico;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -110,6 +112,32 @@ public interface DatosAcademicoRepository extends JpaRepository<DatosAcademico, 
             Long periodoId,
             EstadoAptitud estadoAptitud
     );
+
+    /**
+     * Obtiene todos los registros de DatosAcadémicos asociados a un período académico
+     * específico y que tengan exactamente el estado de aptitud indicado, pero cargando su plan de una vez.
+     *
+     * <p>Esta consulta permite recuperar, por ejemplo, todos los estudiantes
+     * con estado APTO, NO_APTO, EXCLUIDO_POR_ELECTIVAS, etc., pertenecientes
+     * a un periodo dado.</p>
+     *
+     * @param periodoId       ID del período académico.
+     * @param estadoAptitud   Estado de aptitud que se desea filtrar.
+     * @return Lista de entidades {@link DatosAcademico} que cumplen el filtro.
+     */
+    @Query("""
+    SELECT d
+    FROM DatosAcademico d
+    JOIN FETCH d.planEstudios p
+    JOIN FETCH d.respuesta r
+    WHERE r.periodo.id = :periodoId
+      AND d.estadoAptitud = :estadoAptitud
+""")
+    List<DatosAcademico> findAptosConPlanByPeriodo(
+            @Param("periodoId") Long periodoId,
+            @Param("estadoAptitud") EstadoAptitud estadoAptitud
+    );
+
 
 }
 

@@ -1,12 +1,12 @@
 package com.unicauca.fiet.sistema_electivas.asignacion.model;
 
 import com.unicauca.fiet.sistema_electivas.archivo.model.CargaArchivo;
+import com.unicauca.fiet.sistema_electivas.asignacion.enums.EstadoAsignacion;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.model.Oferta;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.annotations.ColumnDefault;
 
 import java.time.Instant;
 
@@ -16,7 +16,12 @@ import java.time.Instant;
 @Table(name = "asignacion_electiva")
 public class AsignacionElectiva {
     @Id
-    @ColumnDefault("nextval('asignacion_electiva_id_seq')")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "asignacion_electiva_id_seq")
+    @SequenceGenerator(
+            name = "asignacion_electiva_id_seq",
+            sequenceName = "asignacion_electiva_id_seq",
+            allocationSize = 50
+    )
     @Column(name = "id", nullable = false)
     private Long id;
 
@@ -34,16 +39,11 @@ public class AsignacionElectiva {
     private Integer numeroOpcion;
 
     @NotNull
-    @Column(name = "estado_asignacion", nullable = false, length = Integer.MAX_VALUE)
-    private String estadoAsignacion;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_asignacion", nullable = false)
+    private EstadoAsignacion estadoAsignacion;
 
     @NotNull
     @Column(name = "fecha_asignacion", nullable = false)
     private Instant fechaAsignacion;
-
-    @NotNull
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "archivo_cargado_id", nullable = false)
-    private CargaArchivo archivoCargado;
-
 }
