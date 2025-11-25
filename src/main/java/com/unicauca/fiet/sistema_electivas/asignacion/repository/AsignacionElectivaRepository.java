@@ -1,11 +1,14 @@
 package com.unicauca.fiet.sistema_electivas.asignacion.repository;
 
 
+import com.unicauca.fiet.sistema_electivas.asignacion.enums.EstadoAsignacion;
 import com.unicauca.fiet.sistema_electivas.asignacion.model.AsignacionElectiva;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -54,4 +57,20 @@ public interface AsignacionElectivaRepository extends JpaRepository<AsignacionEl
             Integer numeroOpcion
     );
 
+    List<AsignacionElectiva> findByOfertaIdAndEstadoAsignacionIn(
+            Long ofertaId,
+            List<EstadoAsignacion> estados
+    );
+
+    // Devuelve todas las asignaciones de un estudiante en un período académico
+    @Query("""
+        SELECT a
+        FROM AsignacionElectiva a
+        WHERE a.estudianteCodigo = :codigoEstudiante
+          AND a.oferta.periodo.id = :periodoId
+    """)
+    List<AsignacionElectiva> findByEstudianteAndPeriodo(
+            @Param("codigoEstudiante") String codigoEstudiante,
+            @Param("periodoId") Long periodoId
+    );
 }

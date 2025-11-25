@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repositorio para la entidad {@link DatosAcademico}, con consultas derivadas
@@ -138,6 +139,12 @@ public interface DatosAcademicoRepository extends JpaRepository<DatosAcademico, 
             @Param("estadoAptitud") EstadoAptitud estadoAptitud
     );
 
+    @Query("""
+    SELECT d FROM DatosAcademico d
+    WHERE d.codigoEstudiante = :codigo
+      AND d.respuesta.periodo.id = :periodoId
+""")
+    Optional<DatosAcademico> findByCodigoAndPeriodo(String codigo, Long periodoId);
 
 }
 

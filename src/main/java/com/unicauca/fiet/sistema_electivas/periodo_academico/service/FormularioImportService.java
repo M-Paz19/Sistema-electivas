@@ -81,24 +81,8 @@ public class FormularioImportService {
             r.setCorreoEstudiante(datos.get("Correo institucional"));
             r.setNombreEstudiante(datos.get("Nombre"));
             r.setApellidosEstudiante(datos.get("Apellidos"));
-            String ts = datos.get("timestampRespuesta");
-            if (ts != null && !ts.isBlank()) {
-                try {
-                    // Declarar el formateador
-                    DateTimeFormatter formatter = new DateTimeFormatterBuilder()
-                            .parseCaseInsensitive()
-                            .appendPattern("yyyy/MM/dd h:mm:ss a 'GMT'X")
-                            .toFormatter(Locale.forLanguageTag("es-CO"));
-                    // Primero parseas a ZonedDateTime
-                    ZonedDateTime zdt = ZonedDateTime.parse(ts.replace("p.m.", "PM").replace("a.m.", "AM"), formatter);
-                    r.setTimestampRespuesta(zdt.toInstant());
-                } catch (DateTimeParseException e) {
-                    log.warn("No se pudo parsear la fecha '{}', se usa Instant.now(): {}", ts, e.getMessage());
-                    r.setTimestampRespuesta(Instant.now());
-                }
-            } else {
-                r.setTimestampRespuesta(Instant.now());
-            }
+            r.setTimestampRespuesta(parsearFechaFlexible(datos.get("timestampRespuesta")));
+
 
 
             // Buscar programa
@@ -292,4 +276,106 @@ public class FormularioImportService {
         if (cell == null) return null;
         return formatter.formatCellValue(cell).trim();
     }
+
+    /**
+     * Intenta convertir un texto de fecha a un {@link Instant} usando múltiples formatos.
+     *
+     * <p>Este método es robusto frente a formatos de fecha provenientes de:
+     * <ul>
+     *     <li>API de Google Forms → ISO-8601 (ej: {@code 2025-11-24T14:30:00.000Z})</li>
+     *     <li>Archivos Excel exportados manualmente → formatos locales (ej:
+     *         {@code 2025/05/27 4:35:13 p.m. GMT-5})</li>
+     *     <li>Variaciones en AM/PM en español (ej: {@code p.m.}, {@code p. m.}, {@code pm})</li>
+     *     <li>Offsets de zona horaria de la forma {@code GMT-5}, {@code GMT-05}, {@code GMT-05:00}</li>
+     * </ul>
+     *
+     * <p>El método aplica una estrategia escalonada:
+     * <ol>
+     *     <li>Intentar parseo ISO-8601 directamente (caso Google API).</li>
+     *     <li>Normalizar variantes de AM/PM en español.</li>
+     *     <li>Intentar varios {@link DateTimeFormatter} que toleran diferentes variantes de GMT.</li>
+     *     <li>Si todo falla, registrar una advertencia y retornar {@link Instant#now()}.</li>
+     * </ol>
+     *
+     * <p>Este comportamiento garantiza que la importación de datos nunca falle por problemas
+     * de formato de fecha y permite rastrear fácilmente problemas mediante logs.
+     *
+     * @param fechaTexto Texto de una fecha proveniente de Excel o Google Forms.
+     * @return Un {@link Instant} válido. Si no es posible interpretar la fecha, retorna la hora actual.
+     */
+    private Instant parsearFechaFlexible(String fechaTexto) {
+
+        if (fechaTexto == null || fechaTexto.isBlank()) {
+            log.warn("Fecha nula o vacía, usando Instant.now()");
+            return Instant.now();
+        }
+
+        String raw = fechaTexto.trim();
+        log.info("Parseando fecha recibida: '{}'", raw);
+
+        // ----------------------------------------------------
+        // 1. INTENTAR ISO-8601 (Google Forms API)
+        // ----------------------------------------------------
+        try {
+            // Google a veces manda "2025-11-25 12:00:00Z" sin T
+            return Instant.parse(raw.replace(" ", "T"));
+        } catch (Exception ignored) {
+            log.debug("No coincide con formato ISO-8601");
+        }
+
+        // ----------------------------------------------------
+        // 2. NORMALIZAR FORMATO LOCAL / EXCEL
+        // ----------------------------------------------------
+
+        // Normalizar AM/PM español
+        String normalizada = raw
+                .replace("p.m.", "PM")
+                .replace("a.m.", "AM")
+                .replace("p. m.", "PM")
+                .replace("a. m.", "AM")
+                .replace("pm", "PM")
+                .replace("am", "AM")
+                .replace("Pm", "PM")
+                .replace("Am", "AM")
+                .trim();
+
+        // Google Forms envía a veces:
+        // "GMT-5", "GMT-05", "GMT-05:00"
+        normalizada = normalizada.replace("GMT-", "GMT-0"); // para que XXX lo entienda
+
+        log.info("Fecha normalizada para parseo: '{}'", normalizada);
+
+        // ----------------------------------------------------
+        // 3. Intentar formato manual variaciones Excel/Google
+        // ----------------------------------------------------
+
+        // LO IMPORTANTE: 'GMT'XXX para offsets flexibles
+        DateTimeFormatter fmts[] = new DateTimeFormatter[]{
+                // Ejemplo: 2025/05/27 4:35:13 PM GMT-05:00
+                DateTimeFormatter.ofPattern("yyyy/MM/dd h:mm:ss a 'GMT'XXX", Locale.US),
+
+                // Ejemplo: 2025/05/27 4:35:13 PM GMT-0500
+                DateTimeFormatter.ofPattern("yyyy/MM/dd h:mm:ss a 'GMT'xx", Locale.US),
+
+                // Ejemplo: 2025/05/27 4:35:13 PM GMT-5
+                DateTimeFormatter.ofPattern("yyyy/MM/dd h:mm:ss a 'GMT'x", Locale.US)
+        };
+
+        for (DateTimeFormatter fmt : fmts) {
+            try {
+                ZonedDateTime zdt = ZonedDateTime.parse(normalizada, fmt);
+                return zdt.toInstant();
+            } catch (Exception ignored) {
+                // continuar probando
+            }
+        }
+
+        // ----------------------------------------------------
+        // 4. Fallo total → log de alerta y fallback
+        // ----------------------------------------------------
+        log.warn("No se pudo parsear la fecha '{}'. Se usará Instant.now()", fechaTexto);
+        return Instant.now();
+    }
+
+
 }

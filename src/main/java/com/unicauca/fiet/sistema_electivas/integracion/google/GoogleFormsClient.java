@@ -66,18 +66,31 @@ public class GoogleFormsClient {
                     mapaPreguntas.put(item.getQuestionItem().getQuestion().getQuestionId(), item.getTitle());
                 }
             }
+            // LISTA FINAL COMPLETA
+            List<Map<String, String>> respuestasTotales = new ArrayList<>();
 
+            // ------ PAGINACIÓN ------
+            String nextPageToken = null;
             //  Obtener respuestas
-            ListFormResponsesResponse response = formsService.forms().responses().list(formId).execute();
-            if (response.getResponses() == null) return Collections.emptyList();
+            do {
+                ListFormResponsesResponse response =
+                        formsService.forms()
+                                .responses()
+                                .list(formId)
+                                .setPageToken(nextPageToken) // <--- clave
+                                .execute();
 
-            List<Map<String, String>> respuestas = new ArrayList<>();
+                if (response.getResponses() != null) {
+                    for (FormResponse fr : response.getResponses()) {
+                        respuestasTotales.add(convertirAmapa(fr, mapaPreguntas));
+                    }
+                }
 
-            for (FormResponse fr : response.getResponses()) {
-                respuestas.add(convertirAmapa(fr, mapaPreguntas));
-            }
+                nextPageToken = response.getNextPageToken(); // <--- ¿hay más páginas?
 
-            return respuestas;
+            } while (nextPageToken != null);
+
+            return respuestasTotales;
 
         } catch (IOException e) {
             throw new GoogleFormsException("Error al obtener respuestas del formulario", e);

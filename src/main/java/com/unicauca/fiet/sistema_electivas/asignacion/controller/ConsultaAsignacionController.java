@@ -1,5 +1,7 @@
 package com.unicauca.fiet.sistema_electivas.asignacion.controller;
 
+import com.unicauca.fiet.sistema_electivas.asignacion.dto.DepartamentoReporteDTO;
+import com.unicauca.fiet.sistema_electivas.asignacion.dto.EstudianteAsignacionReporteResponse;
 import com.unicauca.fiet.sistema_electivas.asignacion.dto.EstudianteOrdenamientoResponse;
 import com.unicauca.fiet.sistema_electivas.asignacion.service.ConsultaAsignacionService;
 import lombok.RequiredArgsConstructor;
@@ -52,6 +54,58 @@ public class ConsultaAsignacionController {
         return ResponseEntity.ok(estudiantes);
     }
 
-    // Aquí puedes agregar más endpoints de consulta en el futuro
-    // Ej: obtener asignaciones de un estudiante específico, estadísticas, etc.
+    /**
+     * Genera la estructura del reporte de listas de asignación
+     * para todas las ofertas del período académico.
+     *
+     * <p>Este endpoint permite consultar la información procesada
+     * posteriormente utilizada para construir el reporte PDF o Excel.</p>
+     *
+     * <p>Incluye por cada departamento:</p>
+     * <ul>
+     *   <li>Electivas del período</li>
+     *   <li>Programas que pueden cursar cada electiva</li>
+     *   <li>Listas de estudiantes asignados y en lista de espera</li>
+     *   <li>Ordenamiento oficial aplicado</li>
+     * </ul>
+     *
+     * @param periodoId ID del período académico, el cual debe estar en estado ASIGNACION_PROCESADA
+     * @return Estructura jerárquica de departamentos, ofertas y estudiantes
+     */
+    @GetMapping("/periodos/{periodoId}/reporte/listasAsignacion/tecnica")
+    public ResponseEntity<List<DepartamentoReporteDTO>> generarReporteListaDeAsignacionTecnica(
+            @PathVariable Long periodoId
+    ) {
+        List<DepartamentoReporteDTO> reporte =
+                consultaAsignacionService.generarListasDeAsigancionPorDepartamentos(periodoId);
+
+        return ResponseEntity.ok(reporte);
+    }
+
+    /**
+     * Genera el reporte detallado del ranking de asignación por estudiante.
+     *
+     * <p>Incluye, para cada estudiante apto del período:</p>
+     * <ul>
+     *     <li>Datos académicos</li>
+     *     <li>Electivas asignadas y en lista de espera</li>
+     *     <li>Programas asociados a cada electiva</li>
+     *     <li>Métricas de avance y promedio</li>
+     * </ul>
+     *
+     * <p>Este reporte solo puede generarse cuando el período se
+     * encuentra en estado ASIGNACION_PROCESADA.</p>
+     *
+     * @param periodoId ID del período académico
+     * @return Lista de estudiantes con su información completa de asignación
+     */
+    @GetMapping("/periodos/{periodoId}/reporte/ranking")
+    public ResponseEntity<List<EstudianteAsignacionReporteResponse>> generarReporteRanking(
+            @PathVariable Long periodoId
+    ) {
+        List<EstudianteAsignacionReporteResponse> reporte =
+                consultaAsignacionService.generarReporteRanking(periodoId);
+
+        return ResponseEntity.ok(reporte);
+    }
 }
