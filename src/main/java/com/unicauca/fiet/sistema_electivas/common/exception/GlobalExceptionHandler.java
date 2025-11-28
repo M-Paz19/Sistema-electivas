@@ -84,10 +84,33 @@ public class GlobalExceptionHandler {
     }
 
     // fallback general (cualquier otra excepción no controlada)
+    /**
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "Ocurrió un error inesperado");
+    }*/
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
+
+        // 🔥 Imprime el error COMPLETO en consola
+        ex.printStackTrace();
+
+        // 🔍 Extraer causa más interna (root cause)
+        Throwable root = ex;
+        while (root.getCause() != null) {
+            root = root.getCause();
+        }
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+        body.put("error", "INTERNAL_ERROR");
+        body.put("message", ex.getMessage());
+        body.put("rootCause", root.toString()); // 👈 Aquí ves el ConstraintViolation real
+
+        return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
     }
+
 
     @ExceptionHandler(GoogleFormsException.class)
     public ResponseEntity<Map<String, Object>> handleGoogleFormsException(GoogleFormsException ex) {
