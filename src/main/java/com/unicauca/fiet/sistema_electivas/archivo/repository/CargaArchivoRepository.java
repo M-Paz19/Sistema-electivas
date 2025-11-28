@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repositorio para el manejo de operaciones de persistencia sobre la entidad {@link CargaArchivo}.
@@ -29,5 +30,11 @@ public interface CargaArchivoRepository extends JpaRepository<CargaArchivo, Long
      */
     List<CargaArchivo> findByPeriodoIdAndTipoArchivo(Long periodoId, TipoArchivo tipoArchivo);
     int countByPeriodoAndTipoArchivo(PeriodoAcademico periodo, TipoArchivo tipoArchivo);
+
+    Optional<CargaArchivo> findTopByPeriodoIdAndTipoArchivoOrderByFechaCargaDesc(
+            Long periodoId,
+            TipoArchivo tipoArchivo
+    );
+
 
 }

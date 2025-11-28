@@ -130,11 +130,17 @@ public class ConsultaAsignacionServiceImpl implements ConsultaAsignacionService 
                 .orElseThrow(() -> new ResourceNotFoundException("Período académico no encontrado."));
 
         // 2. Validar estado PROCESO_FILTRADO_NO_ELEGIBLES
-        if (periodo.getEstado() != EstadoPeriodoAcademico.ASIGNACION_PROCESADA) {
+        // Validar que el período esté en un estado permitido
+        if (periodo.getEstado() != EstadoPeriodoAcademico.ASIGNACION_PROCESADA &&
+                periodo.getEstado() != EstadoPeriodoAcademico.GENERACION_REPORTE_DETALLADO &&
+                periodo.getEstado() != EstadoPeriodoAcademico.GENERACION_LISTAS_PUBLICAS) {
+
             throw new InvalidStateException(
-                    "Solo se puede generar el reporte de listas de asignación cuando el período está en estado ASIGNACION_PROCESADA."
+                    "Solo se puede generar el reporte de ranking cuando el período está en estado " +
+                            "ASIGNACION_PROCESADA, GENERACION_REPORTE_DETALLADO o GENERACION_LISTAS_PUBLICAS."
             );
         }
+
         // 2. Obtener ofertas agrupadas por departamento
         Map<Departamento, List<Oferta>> ofertasPorDepartamento = obtenerOfertasAgrupadas(periodoId);
         // 3. Construir respuesta
@@ -173,12 +179,16 @@ public class ConsultaAsignacionServiceImpl implements ConsultaAsignacionService 
         PeriodoAcademico periodo = periodoAcademicoRepository.findById(periodoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Período académico no encontrado."));
 
-        // 2. Validar estado PROCESO_FILTRADO_NO_ELEGIBLES
-        if (periodo.getEstado() != EstadoPeriodoAcademico.ASIGNACION_PROCESADA) {
+        // 2.Validar que el período esté en un estado permitido
+        if (periodo.getEstado() != EstadoPeriodoAcademico.ASIGNACION_PROCESADA &&
+                periodo.getEstado() != EstadoPeriodoAcademico.GENERACION_REPORTE_DETALLADO) {
+
             throw new InvalidStateException(
-                    "Solo se puede generar el reporte de ranking cuando el período está en estado ASIGNACION_PROCESADA."
+                    "Solo se puede generar el reporte de ranking cuando el período está en estado " +
+                            "ASIGNACION_PROCESADA o GENERACION_REPORTE_DETALLADO."
             );
         }
+
         // 3. Obtener estudiantes aptos
         List<DatosAcademico> aptos = datosAcademicoRepository.findByRespuesta_PeriodoIdAndEstadoAptitud(
                 periodoId,

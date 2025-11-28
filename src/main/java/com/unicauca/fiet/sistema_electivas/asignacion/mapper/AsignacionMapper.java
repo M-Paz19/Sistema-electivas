@@ -4,6 +4,7 @@ import com.unicauca.fiet.sistema_electivas.asignacion.dto.EstudianteAsignacionRe
 import com.unicauca.fiet.sistema_electivas.asignacion.enums.EstadoAsignacion;
 import com.unicauca.fiet.sistema_electivas.asignacion.model.AsignacionElectiva;
 import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.model.DatosAcademico;
+import com.unicauca.fiet.sistema_electivas.programa.util.ProgramaSiglaUtil;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
@@ -95,39 +96,13 @@ public class AsignacionMapper {
         info.setNumeroOpcion(asignacion.getNumeroOpcion());
         info.setNombreElectiva(
                 asignacion.getOferta().getElectiva().getNombre() +
-                        generarSiglasProgramas(nombresProgramas)
+                        ProgramaSiglaUtil.generarSiglasProgramas(nombresProgramas)
         );
         info.setEstado(asignacion.getEstadoAsignacion());
 
         return info;
     }
 
-    /**
-     * Genera la representación de siglas de los programas de la electiva.
-     *
-     * @param programas Lista de nombres de programas
-     * @return Formato "[sigla1-sigla2-...]" o "[sigla]" si es uno solo
-     */
-    private String generarSiglasProgramas(List<String> programas) {
-        if (programas == null || programas.isEmpty()) return "[]";
 
-        String siglas = programas.stream()
-                .map(this::obtenerSigla)
-                .collect(Collectors.joining("-"));
-
-        return "[" + siglas + "]";
-    }
-
-    /**
-     * Convierte un nombre de programa en sigla (ej: "Ingeniería de Sistemas" → "PIS").
-     */
-    private String obtenerSigla(String nombre) {
-        if (nombre == null || nombre.isEmpty()) return "";
-        StringBuilder sb = new StringBuilder("P"); // siempre empieza con P
-        Arrays.stream(nombre.split("\\s+"))
-                .filter(p -> !p.equalsIgnoreCase("de") && !p.equalsIgnoreCase("y") && !p.equalsIgnoreCase("en"))
-                .forEach(p -> sb.append(Character.toUpperCase(p.charAt(0))));
-        return sb.toString();
-    }
 }
 

@@ -1,8 +1,10 @@
 package com.unicauca.fiet.sistema_electivas.electiva.repository;
 
 import com.unicauca.fiet.sistema_electivas.electiva.enums.EstadoElectiva;
+import com.unicauca.fiet.sistema_electivas.electiva.model.Electiva;
 import com.unicauca.fiet.sistema_electivas.electiva.model.ProgramaElectiva;
 import com.unicauca.fiet.sistema_electivas.electiva.model.ProgramaElectivaId;
+import com.unicauca.fiet.sistema_electivas.programa.enums.EstadoPrograma;
 import com.unicauca.fiet.sistema_electivas.programa.model.Programa;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -42,5 +44,24 @@ public interface ProgramaElectivaRepository extends JpaRepository<ProgramaElecti
         WHERE pe.electiva.id = :electivaId
     """)
     List<Programa> findProgramasByElectivaId(@Param("electivaId") Long electivaId);
+
+    /**
+     * Retorna todas las relaciones {@link ProgramaElectiva} donde el programa asociado
+     * se encuentra en estado {@link EstadoPrograma#APROBADO}.
+     *
+     * <p>Este método utiliza <code>JOIN FETCH</code> para cargar de manera anticipada
+     * tanto el {@link Programa} como la {@link Electiva}, evitando el problema de
+     * N+1 queries y optimizando el acceso a los datos relacionados.</p>
+     *
+     * @return una lista de relaciones programa–electiva cuyo programa está aprobado.
+     */
+    @Query("""
+    SELECT pe
+    FROM ProgramaElectiva pe
+    JOIN FETCH pe.programa p
+    JOIN FETCH pe.electiva e
+    WHERE p.estado = com.unicauca.fiet.sistema_electivas.programa.enums.EstadoPrograma.APROBADO
+""")
+    List<ProgramaElectiva> findAllWithProgramaAprobadoAndElectiva();
 
 }

@@ -5,6 +5,9 @@ import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.Map;
+
 /**
  DTO de petición utilizado para solicitar la apertura de un periodo academico y lanzar el formulario
  de inscripcion.
@@ -16,12 +19,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class AbrirPeriodoRequest {
     /**
-     * Cantidad de opciones que los estudiantes podrán seleccionar
-     * en el formulario de preinscripción. Debe ser al menos 1.
+     * Número de opciones que puede escoger cada programa.
+     * Key = programaId, Value = cantidad de opciones.
      */
-    @NotNull(message = "El número de opciones del formulario es obligatorio.")
-    @Min(value = 1, message = "El número de opciones del formulario debe ser al menos 1.")
-    private Integer numeroOpcionesFormulario;
+    @NotNull(message = "Debe enviar las opciones por programa.")
+    private Map<Long, Integer> opcionesPorPrograma;
 
     /**
      * Indica si se debe forzar la apertura del período antes de la fecha configurada.

@@ -34,3 +34,5 @@ build/
 
 # Ignorar credenciales privadas de Google
 src/main/resources/client_secret_*.json
+# Tokens OAuth guardados
+/storage/tokens/

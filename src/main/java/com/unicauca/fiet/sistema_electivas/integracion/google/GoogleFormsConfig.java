@@ -10,6 +10,8 @@ import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.forms.v1.Forms;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import com.google.api.client.util.store.FileDataStoreFactory;
+import java.io.File;
 
 import java.io.InputStreamReader;
 import java.util.List;
@@ -28,7 +30,7 @@ import java.util.List;
  * </ul>
  * </p>
  *
- * <p>Este bean se inyecta automáticamente en componentes como {@link com.tuapp.academico.periodoacademico.infrastructure.GoogleFormsClient}
+ * <p>Este bean se inyecta automáticamente en componentes como {@link GoogleFormsClient}
  * mediante Spring Dependency Injection.</p>
  *
  * @author Juan
@@ -38,6 +40,44 @@ import java.util.List;
 public class GoogleFormsConfig {
 
     private static final String APPLICATION_NAME = "Sistema Electivas";
+    @Bean
+    public Credential googleCredential() throws Exception {
+        // 1. Cargar client_secret.json desde resources
+        GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(
+                JacksonFactory.getDefaultInstance(),
+                new InputStreamReader(
+                        GoogleFormsConfig.class.getResourceAsStream("/client_secret_475492352745-1a78a31v9etga3mv6qt633mn4ibab5gf.apps.googleusercontent.com.json")
+                )
+        );
+
+        // 2. Definir carpeta para guardar tokens dentro de storage/tokens
+        File DATA_STORE_DIR = new File("./storage/tokens");
+        FileDataStoreFactory dataStoreFactory = new FileDataStoreFactory(DATA_STORE_DIR);
+
+        // 3. Configurar flujo OAuth 2.0
+        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
+                GoogleNetHttpTransport.newTrustedTransport(),
+                JacksonFactory.getDefaultInstance(),
+                clientSecrets,
+                List.of(
+                        "https://www.googleapis.com/auth/forms",
+                        "https://www.googleapis.com/auth/drive",
+                        "https://www.googleapis.com/auth/script.projects",
+                        "https://www.googleapis.com/auth/script.external_request"
+                )
+        )
+                .setDataStoreFactory(dataStoreFactory) // Guardar tokens aquí
+                .setAccessType("offline") // Necesario para refresh token
+                .build();
+
+        // 4. Receptor local para OAuth (solo abre navegador la primera vez)
+        LocalServerReceiver receiver = new LocalServerReceiver.Builder()
+                .setPort(8888)
+                .build();
+
+        // 5. Autorizar y devolver credencial
+        return new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
+    }
     /**
      * Crea e inicializa un cliente autenticado de Google Forms API.
      *
@@ -54,37 +94,7 @@ public class GoogleFormsConfig {
      * @throws Exception Si ocurre un error al crear el flujo de autenticación o cargar las credenciales.
      */
     @Bean
-    public Forms googleFormsService() throws Exception {
-        // 1️. Cargar client_secret.json desde resources
-        GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(
-                JacksonFactory.getDefaultInstance(),
-                new InputStreamReader(
-                        GoogleFormsConfig.class.getResourceAsStream("/client_secret_475492352745-1a78a31v9etga3mv6qt633mn4ibab5gf.apps.googleusercontent.com.json")
-                )
-        );
-
-        // 2️. Configurar flujo OAuth
-        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
-                GoogleNetHttpTransport.newTrustedTransport(),
-                JacksonFactory.getDefaultInstance(),
-                clientSecrets,
-                List.of(
-                        "https://www.googleapis.com/auth/forms",
-                        "https://www.googleapis.com/auth/drive"
-                )
-        ).setAccessType("offline").build();
-
-        // 3️. Recibir autorización del usuario (abre navegador)
-        LocalServerReceiver receiver = new LocalServerReceiver.Builder()
-                .setPort(8888)
-                .setCallbackPath("/Callback")
-                .build();
-
-
-        Credential credential = new AuthorizationCodeInstalledApp(flow, receiver)
-                .authorize("user");
-
-        // 4️. Crear y devolver servicio autenticado
+    public Forms googleFormsService(Credential credential) throws Exception {
         return new Forms.Builder(
                 GoogleNetHttpTransport.newTrustedTransport(),
                 JacksonFactory.getDefaultInstance(),

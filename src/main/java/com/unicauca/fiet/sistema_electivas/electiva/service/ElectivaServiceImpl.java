@@ -199,33 +199,39 @@ public class ElectivaServiceImpl implements ElectivaService {
         Electiva electiva = electivaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Electiva no encontrada con id: " + id));
 
-        // Solo se puede desactivar si está APROBADA o ACTIVA
+        // Solo se puede desactivar si está APROBADA
         if (electiva.getEstado() != EstadoElectiva.APROBADA) {
             throw new InvalidStateException("Solo se pueden desactivar electivas en estado APROBADA.");
         }
 
-        // Verificar si tiene ofertas activas (estado OFERTADA)
-        Optional<Oferta> ofertaActiva = ofertaRepository.findFirstByElectivaIdAndEstado(
-                id, EstadoOferta.OFERTADA);
+        // Verificar si tiene ofertas activas (OFERTADA o EN_CURSO)
+        Optional<Oferta> ofertaActiva = ofertaRepository.findFirstByElectivaIdAndEstadoIn(
+                id,
+                List.of(EstadoOferta.OFERTADA, EstadoOferta.EN_CURSO)
+        );
 
         if (ofertaActiva.isPresent()) {
-            String periodo = ofertaActiva.get().getPeriodo().getSemestre();
+            Oferta oferta = ofertaActiva.get();
+            String periodo = oferta.getPeriodo().getSemestre();
+
             throw new InvalidStateException(
-                    "No se puede desactivar. La electiva está actualmente ofertada en el periodo " + periodo +
-                            ". Primero debe cerrar el periodo o remover la electiva de la oferta activa.");
+                    "No se puede desactivar. La electiva está en estado " + oferta.getEstado().getDescripcion() +
+                            " en el periodo " + periodo + "."
+            );
         }
 
         // Si no tiene ofertas activas, se puede desactivar
         electiva.setEstado(EstadoElectiva.INACTIVA);
         electivaRepository.save(electiva);
     }
+
     /**
      * {@inheritDoc}
      */
     @Override
     public void reactivarElectiva(Long id) {
         Electiva electiva = electivaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Electiva no encontrada"));
+                .orElseThrow(() -> new ResourceNotFoundException("Electiva no encontrada"));
         electiva.setEstado(EstadoElectiva.APROBADA);
         electivaRepository.save(electiva);
     }
@@ -235,7 +241,7 @@ public class ElectivaServiceImpl implements ElectivaService {
     @Override
     public void aprobarElectiva(Long id) {
         Electiva electiva = electivaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Electiva no encontrada"));
+                .orElseThrow(() -> new ResourceNotFoundException("Electiva no encontrada"));
         if (!electiva.getEstado().equals(EstadoElectiva.BORRADOR)) {
             throw new InvalidStateException("Solo se pueden aprobar electivas en estado BORRADOR.");
         }

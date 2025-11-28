@@ -50,7 +50,7 @@ public class PeriodoAcademicoMapper {
                 periodo.getFechaApertura(),
                 periodo.getFechaCierre(),
                 periodo.getEstado().name(),
-                periodo.getNumeroOpcionesFormulario(),
+                periodo.getOpcionesPorPrograma(),
                 periodo.getUrlFormulario()
         );
     }

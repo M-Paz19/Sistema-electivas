@@ -2,6 +2,8 @@ package com.unicauca.fiet.sistema_electivas.plan_estudio.service;
 
 
 
+import com.unicauca.fiet.sistema_electivas.periodo_academico.enums.EstadoPeriodoAcademico;
+import com.unicauca.fiet.sistema_electivas.periodo_academico.repository.PeriodoAcademicoRepository;
 import com.unicauca.fiet.sistema_electivas.plan_estudio.dto.*;
 import com.unicauca.fiet.sistema_electivas.plan_estudio.enums.EstadoPlanEstudio;
 import com.unicauca.fiet.sistema_electivas.plan_estudio.mapper.PlanEstudioMapper;
@@ -18,6 +20,7 @@ import com.unicauca.fiet.sistema_electivas.common.exception.DuplicateResourceExc
 import com.unicauca.fiet.sistema_electivas.common.exception.ResourceNotFoundException;
 import jakarta.annotation.Nullable;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,6 +41,7 @@ public class PlanEstudioServiceImpl implements PlanEstudioService {
     private final ProgramaRepository programaRepository;
     private final ExcelParserService excelParserService;
     private final PlanMateriaRepository planMateriaRepository;
+    private final PeriodoAcademicoRepository periodoAcademicoRepository;
 
     /**
      * {@inheritDoc}
@@ -49,6 +53,11 @@ public class PlanEstudioServiceImpl implements PlanEstudioService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Programa con id " + programaId + " no encontrado"));
 
+        // Validar que el estado del Programa no sea DESHABILITADO
+        if (programa.getEstado() == EstadoPrograma.DESHABILITADO) {
+            throw new BusinessException("No se puede crear un un plan para un programa con estado DESHABILITADO. "
+                    + programa.getNombre() +" con estado actual: " + programa.getEstado());
+        }
         // Validar nombre único dentro del programa
         planEstudioRepository.findByNombreAndPrograma(request.getNombre(), programa)
                 .ifPresent(p -> {
@@ -171,7 +180,7 @@ public class PlanEstudioServiceImpl implements PlanEstudioService {
                     plan.setVersion(request.getVersion());
                 }
 
-                // 🔍 Validar que no exista otro plan del mismo año
+                // Validar que no exista otro plan del mismo año
                 boolean existePlanMismoAnio = planEstudioRepository
                         .existsByProgramaAndAnioInicio(programa, nuevoAnio);
 
@@ -212,6 +221,10 @@ public class PlanEstudioServiceImpl implements PlanEstudioService {
             throw new InvalidStateException("Solo los planes activos o en configuración pueden desactivarse.");
         }
 
+        // 2. Validar que no haya un período académico activo
+        if (periodoAcademicoRepository.existsByEstadoIn(EstadoPeriodoAcademico.obtenerEstadosActivos()) && plan.getEstado() == EstadoPlanEstudio.ACTIVO) {
+            throw new InvalidStateException("No se puede deshabilitar un plan activo cuando hay un periodo académico ACTIVO en cualquiera de sus etapas.");
+        }
         // Si está activo, validar que no sea el único activo
         if (plan.getEstado() == EstadoPlanEstudio.ACTIVO) {
             long activos = planEstudioRepository.countByProgramaAndEstado(plan.getPrograma(), EstadoPlanEstudio.ACTIVO);
@@ -256,6 +269,16 @@ public class PlanEstudioServiceImpl implements PlanEstudioService {
             throw new BusinessException("Solo se puede cargar la malla en planes con estado CONFIGURACION_PENDIENTE. "
                     + "Estado actual: " + plan.getEstado());
         }
+        // Validar que el estado del Programa no sea DESHABILITADO
+        if (programa.getEstado() == EstadoPrograma.DESHABILITADO) {
+            throw new BusinessException("Solo se puede cargar la malla en planes cuyo programa no este DESHABILITADO. "
+                    + programa.getNombre() +" con estado actual: " + programa.getEstado());
+        }
+
+        // Validar que no haya un período académico activo
+        if (periodoAcademicoRepository.existsByEstadoIn(EstadoPeriodoAcademico.obtenerEstadosActivos())) {
+            throw new InvalidStateException("No se puede activar un plan cuando hay un periodo académico ACTIVO en cualquiera de sus etapas.");
+        }
 
         // 2. Parsear el archivo a entidades PlanMateria (no guardadas aún)
         List<PlanMateria> materias = excelParserService.parsearMaterias(file, plan);
@@ -285,7 +308,6 @@ public class PlanEstudioServiceImpl implements PlanEstudioService {
         }
 
         // 5. Validar créditos de trabajo de grado
-
         int creditosTrabajoGradoMaterias = materias.stream()
                 .filter(m -> "TRABAJO_GRADO".equalsIgnoreCase(m.getTipo().name()))
                 .mapToInt(PlanMateria::getCreditos)

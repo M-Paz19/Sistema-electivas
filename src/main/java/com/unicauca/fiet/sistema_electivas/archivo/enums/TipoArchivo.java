@@ -16,8 +16,8 @@ public enum TipoArchivo {
     RESPUESTAS_FORMULARIO("Respuestas de formulario"),
     LOTES_CODIGOS("Lotes codigos estudiantiles para SIMCA"),
     DATOS_ACADEMICOS("Datos académicos"),
-    ARCHIVO_ASIGNACION("Archivo de asignación de electivas"),
-    LISTAS("Listas consolidadas");
+    LISTAS("Listas consolidadas"),
+    REPORTE_DETALLADO("Reporte técnico detallado");
 
 
     private final String descripcion;

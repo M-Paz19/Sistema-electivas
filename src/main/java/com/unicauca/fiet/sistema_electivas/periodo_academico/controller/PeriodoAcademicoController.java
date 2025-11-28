@@ -13,6 +13,7 @@ import com.unicauca.fiet.sistema_electivas.periodo_academico.service.PeriodoAcad
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -25,8 +26,8 @@ import java.util.List;
 @RequestMapping("/api/periodos-academicos")
 @RequiredArgsConstructor
 public class PeriodoAcademicoController {
-
-    private final PeriodoAcademicoService periodoService;
+    @Autowired
+    private PeriodoAcademicoService periodoService;
 
 
     /**
@@ -65,7 +66,7 @@ public class PeriodoAcademicoController {
         CambioEstadoResponse response = periodoService.abrirPeriodo(
                 periodoId,
                 request.isForzarApertura(),
-                request.getNumeroOpcionesFormulario()
+                request.getOpcionesPorPrograma()
         );
         return ResponseEntity.ok(response);
     }
@@ -122,6 +123,26 @@ public class PeriodoAcademicoController {
             @RequestParam("file") MultipartFile file) {
 
         CambioEstadoResponse response = periodoService.cargarRespuestasManual(periodoId, file);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Cierra definitivamente el proceso de asignación de electivas para un período académico.
+     *
+     * <p>Acciones realizadas:
+     * <ul>
+     *   <li>Verifica que el período esté en estado {@code EN_PROCESO_ASIGNACION}.</li>
+     *   <li>Cambia su estado a {@code CERRADO}.</li>
+     *   <li>Actualiza todas las ofertas asociadas a {@code CERRADA}.</li>
+     *   <li>No permite modificaciones posteriores: solo consulta y exportación.</li>
+     * </ul>
+     *
+     * @param periodoId ID del período académico.
+     * @return {@link CambioEstadoResponse} con el estado actualizado.
+     */
+    @PostMapping("/{periodoId}/cerrar-periodo")
+    public ResponseEntity<CambioEstadoResponse> cerrarPeriodoAcademico(@PathVariable Long periodoId) {
+        CambioEstadoResponse response = periodoService.cerrarPeriodoAcademico(periodoId);
         return ResponseEntity.ok(response);
     }
 

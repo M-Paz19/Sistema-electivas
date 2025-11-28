@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.util.Map;
 
 /**
 
@@ -25,7 +26,7 @@ public class PeriodoAcademicoResponse {
     private Instant fechaApertura;
     private Instant fechaCierre;
     private String estado;
-    private Integer numeroOpcionesFormulario;
+    private Map<Long, Integer> opcionesPorPrograma;
     private String urlFormulario;
 
 }

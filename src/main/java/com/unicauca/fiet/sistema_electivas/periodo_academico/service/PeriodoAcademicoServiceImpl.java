@@ -2,6 +2,8 @@ package com.unicauca.fiet.sistema_electivas.periodo_academico.service;
 
 import com.unicauca.fiet.sistema_electivas.archivo.service.ArchivoService;
 import com.unicauca.fiet.sistema_electivas.common.exception.*;
+import com.unicauca.fiet.sistema_electivas.electiva.model.ProgramaElectiva;
+import com.unicauca.fiet.sistema_electivas.electiva.repository.ProgramaElectivaRepository;
 import com.unicauca.fiet.sistema_electivas.integracion.google.GoogleFormsClient;
 import com.unicauca.fiet.sistema_electivas.archivo.model.CargaArchivo;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.dto.*;
@@ -13,17 +15,18 @@ import com.unicauca.fiet.sistema_electivas.periodo_academico.model.Oferta;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.model.PeriodoAcademico;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.repository.OfertaRepository;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.repository.PeriodoAcademicoRepository;
+import com.unicauca.fiet.sistema_electivas.programa.dto.ProgramaResponse;
 import com.unicauca.fiet.sistema_electivas.programa.enums.EstadoPrograma;
 import com.unicauca.fiet.sistema_electivas.programa.model.Programa;
 import com.unicauca.fiet.sistema_electivas.programa.repository.ProgramaRepository;
+import com.unicauca.fiet.sistema_electivas.programa.service.ProgramaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.*;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -48,6 +51,9 @@ public class PeriodoAcademicoServiceImpl implements PeriodoAcademicoService {
     private ArchivoService archivoService;
     @Autowired
     private FormularioImportService formularioImportService;
+    @Autowired
+    private ProgramaElectivaRepository programaElectivaRepository;
+
     /**
      * {@inheritDoc}
      */
@@ -154,7 +160,7 @@ public class PeriodoAcademicoServiceImpl implements PeriodoAcademicoService {
      */
     @Override
     @Transactional
-    public CambioEstadoResponse abrirPeriodo(Long periodoId, boolean forzarApertura, Integer numeroOpcionesFormulario){
+    public CambioEstadoResponse abrirPeriodo(Long periodoId, boolean forzarApertura, Map<Long, Integer> opcionesPorPrograma){
         PeriodoAcademico periodo = periodoRepository.findById(periodoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Período no encontrado"));
 
@@ -163,15 +169,12 @@ public class PeriodoAcademicoServiceImpl implements PeriodoAcademicoService {
         }
 
         // 1. Validar que el número de opciones esté configurado
-        if (periodo.getNumeroOpcionesFormulario() == null && numeroOpcionesFormulario == null) {
-            throw new BusinessException(
-                    "Debe definir el número de opciones del formulario antes de abrir el período."
-            );
-        }
+        if ((periodo.getOpcionesPorPrograma() == null || periodo.getOpcionesPorPrograma().isEmpty())
+                && (opcionesPorPrograma == null || opcionesPorPrograma.isEmpty())) {
 
-        // Si viene en la solicitud, actualiza el valor antes de abrir
-        if (numeroOpcionesFormulario != null) {
-            periodo.setNumeroOpcionesFormulario(numeroOpcionesFormulario);
+            throw new BusinessException(
+                    "Debe definir el número de opciones por programa antes de abrir el período."
+            );
         }
 
         // 2. Validar oferta
@@ -181,61 +184,158 @@ public class PeriodoAcademicoServiceImpl implements PeriodoAcademicoService {
         //  Obtener electivas ofertadas del período actual
         List<Oferta> electivasOfertadas = ofertaRepository.findByPeriodo_Id(periodoId);
 
-        // 2. Validar cantidad de electivas ofertadas vs. opciones del formulario
-        int numeroOpciones = periodo.getNumeroOpcionesFormulario();
-        if (electivasOfertadas.size() < numeroOpciones) {
-            throw new BusinessException(
-                    String.format(
-                            "No se puede abrir el período: hay %d electivas ofertadas pero el formulario requiere %d opciones. " +
-                                    "Debe haber al menos tantas electivas ofertadas como opciones disponibles.",
-                            electivasOfertadas.size(), numeroOpciones
-                    )
-            );
-        }
-
-        // 3️. Validar que no haya otro período activo
-        if (periodoRepository.existsByEstadoIn(EstadoPeriodoAcademico.obtenerEstadosActivos())) {
-            throw new InvalidStateException("Ya existe otro período académico activo en curso.");
-        }
-
-        // 4. Validar fecha de apertura
-        Instant ahora = Instant.now();
-        if (ahora.isBefore(periodo.getFechaApertura()) && !forzarApertura) {
-            throw new InvalidStateException("La fecha actual es anterior a la fecha de apertura configurada.");
-        }
-
-        // 5. Obtener los programas aprobados
+        // 3. Obtener los programas aprobados
         List<Programa> programasAprobados = programaRepository.findByEstado(EstadoPrograma.APROBADO);
         if (programasAprobados.isEmpty()) {
             throw new BusinessException("No se encontro programas aprobados");
         }
 
-        //6. Cambiar su estado a EN_CURSO
+
+        // 4. Validar correctamente que el mapa venga bien configurado
+        validarOpcionesPorPrograma(
+                opcionesPorPrograma,
+                programasAprobados,
+                electivasOfertadas
+        );
+
+        // Guardar en el período
+        periodo.setOpcionesPorPrograma(opcionesPorPrograma);
+
+
+
+        // 5. Validar que no haya otro período activo
+        if (periodoRepository.existsByEstadoIn(EstadoPeriodoAcademico.obtenerEstadosActivos())) {
+            throw new InvalidStateException("Ya existe otro período académico activo en curso.");
+        }
+
+        // 6. Validar fecha de apertura
+        Instant ahora = Instant.now();
+        if (ahora.isBefore(periodo.getFechaApertura()) && !forzarApertura) {
+            throw new InvalidStateException("La fecha actual es anterior a la fecha de apertura configurada.");
+        }
+
+
+        //7. Cambiar su estado a EN_CURSO
         electivasOfertadas.forEach(eo -> eo.setEstado(EstadoOferta.EN_CURSO));
         ofertaRepository.saveAll(electivasOfertadas);
 
-        //7. Extraer las electivas asociadas (para el formulario)
+        //8. Extraer las electivas asociadas (para el formulario)
         List<Electiva> electivasEnCurso = electivasOfertadas.stream()
                 .map(Oferta::getElectiva)
                 .collect(Collectors.toList());
 
+        // 9. Crear formulario de preinscripción
+        List<ProgramaElectiva> relaciones=programaElectivaRepository.findAllWithProgramaAprobadoAndElectiva();
 
-        // 8. Crear formulario de preinscripción
-        String urlFormulario = googleFormsClient.crearFormulario(periodo, programasAprobados, electivasEnCurso);
-        periodo.setUrlFormulario(urlFormulario);
+        // Filtrar solo relaciones cuyas electivas estén en curso
+        List<ProgramaElectiva> relacionesEnCurso = relaciones.stream()
+                .filter(pe -> electivasEnCurso.contains(pe.getElectiva()))
+                .toList();
 
-        // 9. Cambiar estado del período a ABIERTO
+        Map<Long, List<Electiva>> electivasPorPrograma = new HashMap<>();
+
+        for (ProgramaElectiva pe : relacionesEnCurso) {
+            electivasPorPrograma
+                    .computeIfAbsent(pe.getPrograma().getId(), k -> new ArrayList<>())
+                    .add(pe.getElectiva());
+        }
+
+        Map<String, Object> respuesta = googleFormsClient.generarFormulario(periodo, programasAprobados, electivasPorPrograma);
+
+        periodo.setUrlFormulario((String) respuesta.get("url"));
+        periodo.setFormId((String) respuesta.get("formId"));
+
+        // 10. Cambiar estado del período a ABIERTO
         periodo.setEstado(EstadoPeriodoAcademico.ABIERTO_FORMULARIO);
         periodoRepository.save(periodo);
 
-        // 10. Retornar respuesta
+        // 11. Retornar respuesta
         return PeriodoAcademicoMapper.toCambioEstadoResponse(
                 periodo,
                 "Período " + periodo.getSemestre() +
-                        " abierto exitosamente. Electivas activadas y formulario generado: " + urlFormulario
+                        " abierto exitosamente. Electivas activadas y formulario generado: " + respuesta.get("url")
         );
 
     }
+
+    /**
+     * Valida que el mapa de opciones por programa esté correctamente configurado
+     * según los programas aprobados y la cantidad de electivas ofertadas.
+     *
+     * @param opcionesPorPrograma Mapa recibido para configurar el periodo (programaId -> opciones)
+     * @param programasAprobados Lista de programas en estado APROBADO
+     * @param electivasOfertadas Lista de electivas ofertadas del período
+     */
+    private void validarOpcionesPorPrograma(
+            Map<Long, Integer> opcionesPorPrograma,
+            List<Programa> programasAprobados,
+            List<Oferta> electivasOfertadas
+    ) {
+
+        if (opcionesPorPrograma == null || opcionesPorPrograma.isEmpty()) {
+            throw new BusinessException("Debe enviar las opciones por programa.");
+        }
+
+        // 1. Obtener IDs reales de los programas aprobados
+        Set<Long> idsProgramasAprobados = programasAprobados.stream()
+                .map(Programa::getId)
+                .collect(Collectors.toSet());
+
+        Set<Long> idsEnRequest = opcionesPorPrograma.keySet();
+
+        // 2. Validar que vengan TODOS los programas aprobados
+        if (!idsEnRequest.containsAll(idsProgramasAprobados)) {
+
+            // obtener nombres de los que faltan
+            List<String> faltantes = programasAprobados.stream()
+                    .filter(p -> !idsEnRequest.contains(p.getId()))
+                    .map(Programa::getNombre)
+                    .toList();
+
+            throw new BusinessException(
+                    "El mapa opcionesPorPrograma no contiene todos los programas aprobados. " +
+                            "Faltan los siguientes programas: " + faltantes
+            );
+        }
+
+        // 3. Validar que no vengan programas extra
+        if (!idsProgramasAprobados.containsAll(idsEnRequest)) {
+
+            List<Long> idsSobrantes = idsEnRequest.stream()
+                    .filter(id -> !idsProgramasAprobados.contains(id))
+                    .toList();
+
+            throw new BusinessException(
+                    "El mapa opcionesPorPrograma contiene programas que no están aprobados. IDs no permitidos: " + idsSobrantes
+            );
+        }
+
+
+        // 4. Validar que cada programa tenga al menos 1 opción
+        opcionesPorPrograma.forEach((programaId, numeroOpciones) -> {
+            if (numeroOpciones == null || numeroOpciones < 1) {
+                throw new BusinessException(
+                        "El programa con ID " + programaId + " debe tener al menos 1 opción."
+                );
+            }
+        });
+
+        // 5. Validar que el número de opciones no supere la oferta disponible
+        int cantidadElectivas = electivasOfertadas.size();
+        opcionesPorPrograma.forEach((programaId, numeroOpciones) -> {
+            if (numeroOpciones > cantidadElectivas) {
+                throw new BusinessException(
+                        String.format(
+                                "El programa %d tiene %d opciones, pero solo hay %d electivas ofertadas. " +
+                                        "No puede asignar más opciones de las que existen.",
+                                programaId, numeroOpciones, cantidadElectivas
+                        )
+                );
+            }
+        });
+    }
+
+
     /**
      * {@inheritDoc}
      */
@@ -249,7 +349,7 @@ public class PeriodoAcademicoServiceImpl implements PeriodoAcademicoService {
             throw new InvalidStateException("Solo se puede cerrar un período en estado ABIERTO.");
         }
 
-        String formId = extraerFormId(periodo.getUrlFormulario());
+        String formId = periodo.getFormId();
         if (formId == null || formId.isEmpty()) {
             throw new InvalidStateException("No se puede cerrar el formulario: no se ha configurado un URL válido.");
         }
@@ -258,12 +358,12 @@ public class PeriodoAcademicoServiceImpl implements PeriodoAcademicoService {
         try {
             // flujo automático
             googleFormsClient.cerrarFormulario(formId);
+
             List<Map<String, String>> datos = googleFormsClient.obtenerRespuestas(formId);
             if (datos.isEmpty()) throw new GoogleFormsException("No se encontraron respuestas.");
 
             CargaArchivo archivo = archivoService.guardarArchivoRespuestas(datos, periodo);
             formularioImportService.procesarRespuestas(datos, periodo, archivo);
-
         } catch (GoogleFormsException ex) {
             // Fallback: solicitar carga manual
             log.warn("Fallo en obtención automática de respuestas. Requiere carga manual. Causa: {}", ex.getMessage());
@@ -293,10 +393,10 @@ public class PeriodoAcademicoServiceImpl implements PeriodoAcademicoService {
             throw new BusinessException("La URL del formulario no puede ser nula o vacía");
         }
 
-        // Ejemplo: https://docs.google.com/forms/d/1maVuIHsSfEwHgmAGgtx0i7mdPZRm4JjUjiGNoc6EvCw/viewform
+        // Ejemplo: https://docs.google.com/forms/d/e/1maVuIHsSfEwHgmAGgtx0i7mdPZRm4JjUjiGNoc6EvCw/viewform
         // Resultado esperado: 1maVuIHsSfEwHgmAGgtx0i7mdPZRm4JjUjiGNoc6EvCw
         try {
-            String[] partes = urlFormulario.split("/d/");
+            String[] partes = urlFormulario.split("/d/e/");
             if (partes.length < 2) throw new BusinessException("URL inválida");
 
             String resto = partes[1];
@@ -337,5 +437,37 @@ public class PeriodoAcademicoServiceImpl implements PeriodoAcademicoService {
         );
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Transactional
+    public CambioEstadoResponse cerrarPeriodoAcademico(Long periodoId) {
+
+        PeriodoAcademico periodo = periodoRepository.findById(periodoId)
+                .orElseThrow(() -> new ResourceNotFoundException("No existe el período académico solicitado."));
+
+        if (periodo.getEstado() != EstadoPeriodoAcademico.ASIGNACION_PROCESADA) {
+            throw new InvalidStateException("El período no se encuentra en estado ASIGNACION_PROCESADA.");
+        }
+
+        // 1. Cambiar estado del período
+        periodo.setEstado(EstadoPeriodoAcademico.CERRADO);
+        periodoRepository.save(periodo);
+
+        // 2. Actualizar todas las ofertas asociadas
+        List<Oferta> ofertas = ofertaRepository.findByPeriodoId(periodoId);
+
+        Instant ahora = Instant.now();
+        for (Oferta oferta : ofertas) {
+            oferta.setEstado(EstadoOferta.CERRADA);
+            oferta.setFechaActualizacion(ahora);
+        }
+
+        ofertaRepository.saveAll(ofertas);
+
+        // 3. Retornar respuesta
+        return PeriodoAcademicoMapper.toCambioEstadoResponse(periodo,"El perido academico "+periodo.getSemestre()+" ha sido cerrada exitosamente.");
+    }
 
 }

@@ -5,8 +5,12 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 
 @Getter
 @Setter
@@ -36,9 +40,15 @@ public class PeriodoAcademico {
     @Column(name = "estado", nullable = false, length = 50)
     private EstadoPeriodoAcademico estado;
 
-    @Column(name = "numero_opciones_formulario")
-    private Integer numeroOpcionesFormulario;
+    @NotNull
+    @Column(name = "opciones_por_programa", nullable = false)
+    @JdbcTypeCode(SqlTypes.JSON)
+    private Map<Long, Integer> opcionesPorPrograma = new HashMap<>();
 
     @Column(name = "url_formulario")
     private String urlFormulario;
+
+    @Column(name = "form_id")
+    private String formId;
+
 }

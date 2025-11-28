@@ -32,6 +32,8 @@ public enum EstadoPeriodoAcademico {
 
     PROCESO_FILTRADO_NO_ELEGIBLES("Filtrado de estudiantes no elegibles, ya vieron todas las electivas de su plan", true),
     EN_PROCESO_ASIGNACION("Asignación de electivas en curso", true),
+    GENERACION_REPORTE_DETALLADO("Se esta generando el reporte técnico detallado de las asignaciones realizadas", true),
+    GENERACION_LISTAS_PUBLICAS("Se esta generando las listas publicas que resultaron de la asignación", true),
     ASIGNACION_PROCESADA("Asignación de electivas finalizada", true),
     CERRADO("Periodo cerrado - asignaciones completadas", false);
 

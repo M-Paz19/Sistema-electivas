@@ -21,8 +21,6 @@ import java.io.InputStream;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
-import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -72,18 +70,15 @@ public class FormularioImportService {
             CargaArchivo archivo) {
 
         List<RespuestasFormulario> entidades = new ArrayList<>();
-
         for (Map<String, String> datos : datosCrudos) {
             RespuestasFormulario r = new RespuestasFormulario();
             r.setPeriodo(periodo);
             r.setArchivoCargado(archivo);
             r.setCodigoEstudiante(datos.get("Código del estudiante"));
             r.setCorreoEstudiante(datos.get("Correo institucional"));
-            r.setNombreEstudiante(datos.get("Nombre"));
+            r.setNombreEstudiante(datos.get("Nombres"));
             r.setApellidosEstudiante(datos.get("Apellidos"));
             r.setTimestampRespuesta(parsearFechaFlexible(datos.get("timestampRespuesta")));
-
-
 
             // Buscar programa
             String progTexto = datos.get("Programa académico");
@@ -135,6 +130,7 @@ public class FormularioImportService {
             Map.entry("código del estudiante", "código del estudiante"),
             Map.entry("codigo del estudiante", "código del estudiante"),
             Map.entry("nombre", "nombre"),
+            Map.entry("nombres", "nombre"),
             Map.entry("apellidos", "apellidos"),
             Map.entry("programa académico", "programa académico"),
             Map.entry("programa", "programa académico"),
@@ -311,7 +307,6 @@ public class FormularioImportService {
         }
 
         String raw = fechaTexto.trim();
-        log.info("Parseando fecha recibida: '{}'", raw);
 
         // ----------------------------------------------------
         // 1. INTENTAR ISO-8601 (Google Forms API)
@@ -343,8 +338,6 @@ public class FormularioImportService {
         // "GMT-5", "GMT-05", "GMT-05:00"
         normalizada = normalizada.replace("GMT-", "GMT-0"); // para que XXX lo entienda
 
-        log.info("Fecha normalizada para parseo: '{}'", normalizada);
-
         // ----------------------------------------------------
         // 3. Intentar formato manual variaciones Excel/Google
         // ----------------------------------------------------
@@ -373,7 +366,6 @@ public class FormularioImportService {
         // ----------------------------------------------------
         // 4. Fallo total → log de alerta y fallback
         // ----------------------------------------------------
-        log.warn("No se pudo parsear la fecha '{}'. Se usará Instant.now()", fechaTexto);
         return Instant.now();
     }
 

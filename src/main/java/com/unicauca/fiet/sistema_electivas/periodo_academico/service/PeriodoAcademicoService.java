@@ -12,6 +12,7 @@ import com.unicauca.fiet.sistema_electivas.periodo_academico.model.PeriodoAcadem
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Servicio de gestión de periodos académicos.
@@ -65,7 +66,8 @@ public interface PeriodoAcademicoService {
      * @throws ResourceNotFoundException si no existe el período con el ID indicado
      * @throws BusinessException si no se cumplen las condiciones para la apertura
      */
-    CambioEstadoResponse abrirPeriodo(Long periodoId, boolean forzarApertura, Integer numeroOpcionesFormulario);
+    CambioEstadoResponse abrirPeriodo(Long periodoId, boolean forzarApertura, Map<Long, Integer> opcionesPorPrograma);
+
     /**
      * Obtiene una lista de períodos académicos con información resumida para la tabla.
      *
@@ -117,4 +119,24 @@ public interface PeriodoAcademicoService {
      * @throws BusinessException Si el archivo es inválido o presenta errores de formato.
      */
     CambioEstadoResponse cargarRespuestasManual(Long periodoId, MultipartFile file);
+
+    /**
+     * Cierra definitivamente el proceso de asignación de un período académico.
+     *
+     * <p>Acciones realizadas:
+     * <ul>
+     *   <li>Valida que el período esté en estado {@code EN_PROCESO_ASIGNACION}.</li>
+     *   <li>Cambia el estado del período a {@code CERRADO}.</li>
+     *   <li>Actualiza todas las {@code Oferta} asociadas a estado {@code CERRADA}.</li>
+     *   <li>Establece la fecha de actualización correspondiente.</li>
+     *   <li>Garantiza que, una vez cerrado, el período solo permite consultas y exportaciones.</li>
+     * </ul>
+     *
+     * @param periodoId identificador del período académico.
+     * @return {@link CambioEstadoResponse} con el nuevo estado del período.
+     * @throws ResourceNotFoundException si el período no existe.
+     * @throws InvalidStateException si el período no está en estado EN_PROCESO_ASIGNACION.
+     */
+    CambioEstadoResponse cerrarPeriodoAcademico(Long periodoId);
+
 }

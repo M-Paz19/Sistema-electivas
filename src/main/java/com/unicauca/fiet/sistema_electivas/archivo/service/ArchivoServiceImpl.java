@@ -6,6 +6,7 @@ import com.unicauca.fiet.sistema_electivas.archivo.model.CargaArchivo;
 import com.unicauca.fiet.sistema_electivas.archivo.repository.CargaArchivoRepository;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.model.PeriodoAcademico;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,16 +20,14 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -42,6 +41,7 @@ public class ArchivoServiceImpl implements ArchivoService {
     private final Path lotesSimcaPath;
     private final Path respuestasPath;
     private final Path datos_academicos;
+    private final Path reportesPath;
 
     @Autowired
     public ArchivoServiceImpl(
@@ -50,8 +50,8 @@ public class ArchivoServiceImpl implements ArchivoService {
             @Value("${storage.mallas-path}") String mallasPath,
             @Value("${storage.lotes-simca-path}") String lotesSimcaPath,
             @Value("${storage.respuestas-path}") String respuestasPath,
-            @Value("${storage.datos_academicos}") String datos_academicos
-
+            @Value("${storage.datos_academicos}") String datos_academicos,
+            @Value("${storage.reportes-path}") String reportesPath
     ) {
         this.cargaArchivoRepository = cargaArchivoRepository;
 
@@ -61,7 +61,7 @@ public class ArchivoServiceImpl implements ArchivoService {
         this.lotesSimcaPath = this.storagePath.resolve(lotesSimcaPath).normalize();
         this.respuestasPath = this.storagePath.resolve(respuestasPath).normalize();
         this.datos_academicos = this.storagePath.resolve(datos_academicos).normalize();
-
+        this.reportesPath = this.storagePath.resolve(reportesPath).normalize();
         try {
             // Crear todos los directorios necesarios si no existen
             Files.createDirectories(this.storagePath);
@@ -69,6 +69,7 @@ public class ArchivoServiceImpl implements ArchivoService {
             Files.createDirectories(this.lotesSimcaPath);
             Files.createDirectories(this.respuestasPath);
             Files.createDirectories(this.datos_academicos);
+            Files.createDirectories(this.reportesPath);
         } catch (Exception ex) {
             throw new RuntimeException("No se pudo crear uno o más directorios de almacenamiento.", ex);
         }
@@ -84,10 +85,18 @@ public class ArchivoServiceImpl implements ArchivoService {
             // Usa la variable Path inicializada en el constructor
             String fileName = "respuestas_" + periodo.getSemestre() + "_" + LocalDate.now() + ".csv";
             Path filePath = this.respuestasPath.resolve(fileName);
+            // Obtener mapa de opciones por programa
+            Map<Long, Integer> opcionesPorPrograma = periodo.getOpcionesPorPrograma();
 
-            int numeroOpciones = periodo.getNumeroOpcionesFormulario() != null
-                    ? periodo.getNumeroOpcionesFormulario()
-                    : 7;
+            // Calcular el máximo de opciones (defecto 1 si es nulo o vacío)
+            int numeroOpciones = 1;
+            if (opcionesPorPrograma != null && !opcionesPorPrograma.isEmpty()) {
+                numeroOpciones = opcionesPorPrograma.values().stream()
+                        .filter(Objects::nonNull)           // ignorar nulls por si acaso
+                        .mapToInt(Integer::intValue)
+                        .max()
+                        .orElse(7);                         // fallback si todos eran nulls
+            }
 
             try (BufferedWriter writer = Files.newBufferedWriter(filePath, StandardCharsets.UTF_8)) {
                 writer.write('\uFEFF'); // BOM
@@ -108,7 +117,7 @@ public class ArchivoServiceImpl implements ArchivoService {
                             quote(fila.getOrDefault("timestampRespuesta", "")),
                             quote(fila.getOrDefault("Correo institucional", "")),
                             quote(fila.getOrDefault("Código del estudiante", "")),
-                            quote(fila.getOrDefault("Nombre", "")),
+                            quote(fila.getOrDefault("Nombres", "")),
                             quote(fila.getOrDefault("Apellidos", "")),
                             quote(fila.getOrDefault("Programa académico", ""))
                     ));
@@ -153,7 +162,6 @@ public class ArchivoServiceImpl implements ArchivoService {
     /**
      * Implementación del método sobrecargado con sufijo.
      */
-
     @Override
     @Transactional
     public List<CargaArchivo> generarArchivosLotesSimca(List<List<String>> lotes, PeriodoAcademico periodo, String sufijoNombreArchivo) {
@@ -273,6 +281,88 @@ public class ArchivoServiceImpl implements ArchivoService {
         } catch (IOException e) {
             log.error("Error al guardar archivo de datos académicos SIMCA: {}", e.getMessage());
             throw new RuntimeException("No se pudo guardar el archivo de datos académicos.", e);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Transactional
+    public CargaArchivo guardarReporteDetallado(Workbook workbook, PeriodoAcademico periodo) {
+        try {
+            String fileName = String.format(
+                    "ReporteDetallado_%s_%s.xlsx",
+                    periodo.getSemestre(),
+                    LocalDate.now()
+            );
+
+            Path filePath = this.reportesPath.resolve(fileName);
+
+            // Guardar físicamente el archivo Excel
+            try (FileOutputStream fos = new FileOutputStream(filePath.toFile())) {
+                workbook.write(fos);
+            }
+
+            // Registrar en BD
+            CargaArchivo archivo = new CargaArchivo();
+            archivo.setPeriodo(periodo);
+            archivo.setTipoArchivo(TipoArchivo.REPORTE_DETALLADO);
+            archivo.setNombreArchivo(fileName);
+            archivo.setRutaAlmacenamiento(filePath.toString());
+            archivo.setFechaCarga(Instant.now());
+            archivo.setEstado(EstadoArchivo.PROCESADO);
+
+            cargaArchivoRepository.save(archivo);
+
+            log.info("Reporte técnico guardado correctamente en {}", filePath);
+
+            return archivo;
+
+        } catch (Exception e) {
+            log.error("Error al guardar reporte detallado: {}", e.getMessage());
+            throw new RuntimeException("No se pudo guardar el reporte detallado.", e);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Transactional
+    public CargaArchivo guardarReportePublicacion(Workbook workbook, PeriodoAcademico periodo) {
+        try {
+            String fileName = String.format(
+                    "ReportePublicacion_%s_%s.xlsx",
+                    periodo.getSemestre(),
+                    LocalDate.now()
+            );
+
+            Path filePath = this.reportesPath.resolve(fileName);
+
+            // Guardar físicamente el archivo Excel
+            try (FileOutputStream fos = new FileOutputStream(filePath.toFile())) {
+                workbook.write(fos);
+            }
+
+            // Registrar en BD
+            CargaArchivo archivo = new CargaArchivo();
+            archivo.setPeriodo(periodo);
+            archivo.setTipoArchivo(TipoArchivo.LISTAS);
+            archivo.setNombreArchivo(fileName);
+            archivo.setRutaAlmacenamiento(filePath.toString());
+            archivo.setFechaCarga(Instant.now());
+            archivo.setEstado(EstadoArchivo.PROCESADO);
+
+            cargaArchivoRepository.save(archivo);
+
+            log.info("Reporte de publicación guardado correctamente en {}", filePath);
+
+            return archivo;
+
+        } catch (Exception e) {
+            log.error("Error al guardar reporte de publicación: {}", e.getMessage());
+            throw new RuntimeException("No se pudo guardar el reporte de publicación.", e);
         }
     }
 

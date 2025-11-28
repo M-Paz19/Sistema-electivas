@@ -7,8 +7,11 @@ import com.unicauca.fiet.sistema_electivas.asignacion.enums.EstadoAsignacion;
 import com.unicauca.fiet.sistema_electivas.departamento.model.Departamento;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.model.Oferta;
 import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.model.DatosAcademico;
+import com.unicauca.fiet.sistema_electivas.programa.util.ProgramaSiglaUtil;
+
 
 import java.util.List;
+
 
 public class ReporteAsignacionMapper {
 
@@ -20,7 +23,7 @@ public class ReporteAsignacionMapper {
         OfertaReporteDTO dto = new OfertaReporteDTO();
         dto.setIdOferta(o.getId());
         dto.setCodigoElectiva(o.getElectiva().getCodigo());
-        dto.setNombreElectiva(o.getElectiva().getNombre());
+        dto.setNombreElectiva(o.getElectiva().getNombre()+ProgramaSiglaUtil.generarSiglasProgramas(programas));
         dto.setProgramas(programas);
         dto.setListaEstudiantes(estudiantes);
         return dto;
@@ -38,4 +41,6 @@ public class ReporteAsignacionMapper {
         dto.setEstado(estado);
         return dto;
     }
+
+
 }

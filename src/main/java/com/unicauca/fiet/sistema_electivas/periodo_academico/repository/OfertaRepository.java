@@ -25,16 +25,17 @@ public interface OfertaRepository extends JpaRepository<Oferta, Long> {
         SELECT CASE WHEN COUNT(eo) > 0 THEN TRUE ELSE FALSE END
         FROM Oferta eo
         WHERE eo.electiva.id = :electivaId
-          AND (eo.estado = 'CERRADA' OR eo.estado = 'OFERTADA')
+          AND (eo.estado = 'CERRADA' OR eo.estado = 'OFERTADA' OR eo.estado = 'EN_CURSO')
     """)
     boolean hasHistorial(@Param("electivaId") Long electivaId);
     /**
      * Obtiene la primera oferta de una electiva en un estado específico.
      * @param electivaId ID de la electiva
-     * @param estado Estado de la oferta
+     * @param estados Estados de la oferta
      * @return Optional con la primera oferta encontrada
      */
-    Optional<Oferta> findFirstByElectivaIdAndEstado(Long electivaId, EstadoOferta estado);
+    Optional<Oferta> findFirstByElectivaIdAndEstadoIn(Long electivaId, List<EstadoOferta> estados);
+
     /**
      * Verifica si una electiva ya está incluida en la oferta de un período.
      * @param electivaId ID de la electiva

@@ -150,11 +150,6 @@ public class AsignacionServiceImpl implements AsignacionService {
         Map<Long, Map<Long, AtomicInteger>> cuposRestantesPorOferta = inicializarCuposPorOferta(ofertas);
         Map<Long, AtomicInteger> listaEsperaPorOferta = inicializarListaEspera(ofertas);
 
-        /**Posible uso futuro si necesito mas optimizacion
-        Map<Long, PlanEstudio> planesPorId = planEstudioRepository.findAll()
-                .stream()
-                .collect(Collectors.toMap(PlanEstudio::getId, p -> p));
-        **/
         // Lista global que acumula TODAS las asignaciones de TODOS los estudiantes
         List<AsignacionElectiva> acumuladoAsignaciones = new ArrayList<>();
         int procesados = 0;
@@ -186,7 +181,7 @@ public class AsignacionServiceImpl implements AsignacionService {
         if (!acumuladoAsignaciones.isEmpty()) {
             asignacionElectivaRepository.saveAll(acumuladoAsignaciones);
         }
-        periodo.setEstado(EstadoPeriodoAcademico.ASIGNACION_PROCESADA);
+        periodo.setEstado(EstadoPeriodoAcademico.GENERACION_REPORTE_DETALLADO);
         PeriodoAcademico actualizado = periodoRepository.save(periodo);
         // 5. Construir mensaje final
         String mensaje = String.format("Asignación completada. Estudiantes procesados: %d. Errores: %d.", procesados, errores);
@@ -350,7 +345,8 @@ public class AsignacionServiceImpl implements AsignacionService {
         );
 
         // 6. Electivas faltantes → intentar lista de espera
-        int faltantes = (electivasAAsignar - asignadasDirectas) * 2;
+        //creo que esta bien
+        int faltantes = Math.min((estudiante.getPlanEstudios().getElectivasRequeridas()-estudiante.getAprobadas()-asignadasDirectas), ((electivasAAsignar - asignadasDirectas) * 2));
         if (faltantes > 0) {
             procesarListasDeEspera(faltantes, asignacionesDelEstudiante, listaEsperaPorOferta);
         }

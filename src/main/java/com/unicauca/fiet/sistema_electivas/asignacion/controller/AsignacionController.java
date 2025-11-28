@@ -1,16 +1,13 @@
 package com.unicauca.fiet.sistema_electivas.asignacion.controller;
 
-import com.unicauca.fiet.sistema_electivas.asignacion.dto.EstudianteOrdenamientoResponse;
 import com.unicauca.fiet.sistema_electivas.asignacion.service.AsignacionService;
 
 import com.unicauca.fiet.sistema_electivas.asignacion.service.ConsultaAsignacionService;
 import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.dto.CambioEstadoValidacionResponse;
-import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.dto.DatosAcademicoResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 /**
  * Controlador encargado de gestionar los procesos relacionados

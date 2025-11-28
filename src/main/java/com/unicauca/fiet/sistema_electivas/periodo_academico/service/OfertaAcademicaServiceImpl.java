@@ -243,7 +243,7 @@ public class OfertaAcademicaServiceImpl implements OfertaAcademicaService {
     public List<OfertaResponse> listarElectivasPorPeriodo(Long periodoId) {
 
         // Validar existencia del período
-        PeriodoAcademico periodo = periodoRepository.findById(periodoId)
+        periodoRepository.findById(periodoId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "No se encontró el período académico con ID " + periodoId
                 ));

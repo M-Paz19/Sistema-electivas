@@ -1,8 +1,11 @@
 package com.unicauca.fiet.sistema_electivas.integracion.google;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.forms.v1.Forms;
 import com.google.api.services.forms.v1.model.*;
+import com.google.api.client.auth.oauth2.Credential;
 
 import com.unicauca.fiet.sistema_electivas.common.exception.GoogleFormsException;
 import com.unicauca.fiet.sistema_electivas.electiva.model.Electiva;
@@ -13,8 +16,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.net.URL;
+
+
 /**
  * Cliente para la integración con la API de Google Forms.
  *
@@ -36,7 +47,11 @@ import java.util.*;
 public class GoogleFormsClient {
     /** Cliente oficial de la API de Google Forms, inyectado mediante configuración de seguridad OAuth. */
     private final Forms formsService;
+    private final Credential googleCredential;
 
+    private final String appsScriptUrl = "https://script.googleapis.com/v1/scripts/AKfycbwRxkD8ipBGCZCk7_DJ8u12w6avpESkjHTUhOB4ybhSywTfQTShsTBjrVibxiHoVJ06jA:run";
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
     // --------------------------------------------------------
     // MÉTODOS PRINCIPALES DE INTEGRACIÓN
     // --------------------------------------------------------
@@ -158,79 +173,86 @@ public class GoogleFormsClient {
                 .orElse(null);
         return obj != null ? ((Map<?, ?>) obj).get("textAnswers").toString() : null;
     }
-    /**
-     * Crea un formulario de preinscripción en Google Forms con los campos requeridos.
-     *
-     * @param periodo   el período académico para el cual se genera el formulario
-     * @param programas la lista de programas académicos disponibles
-     * @param electivas la lista de electivas disponibles
-     * @return la URL pública del formulario creado
-     */
-    public String crearFormulario(PeriodoAcademico periodo, List<Programa> programas, List<Electiva> electivas) {
+
+    public Map<String, Object> generarFormulario(
+            PeriodoAcademico periodo,
+            List<Programa> programas,
+            Map<Long, List<Electiva>> electivasPorPrograma
+    ) {
         try {
-            // 1️. Crear el formulario con título mínimo
-            Form form = new Form();
-            Info info = new Info();
-            info.setTitle("Preinscripción de Electivas " + periodo.getSemestre());
-            form.setInfo(info);
-
-            Form createdForm = formsService.forms().create(form).execute();
-            String formId = createdForm.getFormId();
-
-            // 2️. Preparar batchUpdate para descripción y preguntas
-            List<Request> requests = new ArrayList<>();
-
-            Info updatedInfo = new Info()
-                    .setDescription("Formulario de preinscripción para el período " + periodo.getSemestre());
-            requests.add(new Request().setUpdateFormInfo(
-                    new UpdateFormInfoRequest()
-                            .setInfo(updatedInfo)
-                            .setUpdateMask("description")
-            ));
-
-            // Preguntas de texto
-            List<String> preguntasTexto = List.of("Correo institucional", "Código del estudiante", "Nombre", "Apellidos");
-            int currentIndex = 0;
-            for (String pregunta : preguntasTexto) {
-                requests.add(new Request().setCreateItem(
-                        new CreateItemRequest()
-                                .setItem(campoTexto(pregunta))
-                                .setLocation(new Location().setIndex(currentIndex++))
-                ));
+            // Convertir electivasPorPrograma a Map<String, List<String>>
+            Map<String, List<String>> electivasMap = new HashMap<>();
+            for (var entry : electivasPorPrograma.entrySet()) {
+                electivasMap.put(
+                        entry.getKey().toString(),
+                        entry.getValue().stream().map(Electiva::getNombre).toList()
+                );
             }
 
-            // Programa académico (combo)
-            requests.add(new Request().setCreateItem(
-                    new CreateItemRequest()
-                            .setItem(campoCombo("Programa académico",
-                                    programas.stream().map(Programa::getNombre).toList(),
-                                    true))
-                            .setLocation(new Location().setIndex(currentIndex++))
-            ));
+            // Crear JSON para Apps Script
+            Map<String, Object> payload = Map.of(
+                    "function", "generarFormulario",
+                    "parameters", List.of(
+                            Map.of(
+                                    "periodo", periodo.getSemestre(),
+                                    "programas", programas.stream().map(p -> Map.of(
+                                            "id", p.getId(),
+                                            "nombre", p.getNombre(),
+                                            "opciones", periodo.getOpcionesPorPrograma().get(p.getId())
+                                    )).toList(),
+                                    "electivas", electivasMap
+                            )
+                    )
+            );
 
-            // Electivas opción 1 a N (según el periodo)
-            int numeroOpciones = periodo.getNumeroOpcionesFormulario();
 
-            for (int i = 1; i <= numeroOpciones; i++) {
-                boolean obligatorio = (i == 1); // solo la primera es obligatoria
-                requests.add(new Request().setCreateItem(
-                        new CreateItemRequest()
-                                .setItem(campoCombo("Electiva opción " + i,
-                                        electivas.stream().map(Electiva::getNombre).toList(),
-                                        obligatorio))
-                                .setLocation(new Location().setIndex(currentIndex++))
-                ));
+            String token = googleCredential.getAccessToken();
+
+            HttpURLConnection con = (HttpURLConnection) new URL(appsScriptUrl).openConnection();
+            con.setRequestMethod("POST");
+            con.setDoOutput(true);
+            con.setRequestProperty("Content-Type", "application/json");
+            con.setRequestProperty("Authorization", "Bearer " + token);
+
+
+            // Escribir JSON
+            try (OutputStream os = con.getOutputStream()) {
+                os.write(objectMapper.writeValueAsBytes(payload));
             }
 
-            // 3️. Ejecutar batchUpdate
-            BatchUpdateFormRequest batchRequest = new BatchUpdateFormRequest().setRequests(requests);
-            formsService.forms().batchUpdate(formId, batchRequest).execute();
+            int status = con.getResponseCode();
 
-            // 4️. Devolver URL pública
-            return "https://docs.google.com/forms/d/" + formId + "/viewform";
+            // Si Apps Script devolvió error 4xx o 5xx → leer el error
+            if (status >= 400) {
+                String errorBody = new BufferedReader(new InputStreamReader(con.getErrorStream()))
+                        .lines().collect(Collectors.joining());
+
+                System.err.println("ERROR HTTP " + status);
+                System.err.println("CUERPO DEVUELTO POR APPS SCRIPT:");
+                System.err.println(errorBody);
+
+                throw new RuntimeException("Error HTTP " + status + ": " + errorBody);
+            }
+
+            // Leer respuesta OK
+            String response = new BufferedReader(new InputStreamReader(con.getInputStream()))
+                    .lines().collect(Collectors.joining());
+
+            Map<String, Object> root = objectMapper.readValue(response, Map.class);
+
+            Map<String, Object> resp = (Map<String, Object>) root.get("response");
+
+            if (resp == null || resp.get("result") == null) {
+                throw new RuntimeException("Apps Script no devolvió 'response.result'. Respuesta cruda: " + response);
+            }
+
+            return (Map<String, Object>) resp.get("result");
 
         } catch (Exception e) {
-            throw new GoogleFormsException("Error al comunicarse con Google Forms", e);
+            System.err.println("EXCEPCIÓN COMPLETA EN generarFormulario():");
+            e.printStackTrace(); // stacktrace detallado
+
+            throw new RuntimeException("Error llamando a Apps Script", e);
         }
     }
 
@@ -241,7 +263,6 @@ public class GoogleFormsClient {
      * la configuración de publicación del formulario.</p>
      *
      * @param formId ID del formulario de Google Forms.
-     * @throws IOException Si ocurre un error al comunicarse con la API.
      */
     public void cerrarFormulario(String formId) {
         try {
@@ -261,7 +282,17 @@ public class GoogleFormsClient {
 
             log.info("Formulario [{}] cerrado correctamente. Ya no acepta respuestas.", formId);
         } catch (Exception e) {
-            throw new GoogleFormsException("Error al comunicarse con Google Forms", e);
+            // 🔥 1. Imprimir el mensaje base
+            log.error("❌ Error al comunicarse con Google Forms: {}", e.getMessage());
+
+            // 🔥 2. Imprimir todo el cuerpo de respuesta de la API (si es un HttpResponseException)
+            if (e instanceof com.google.api.client.http.HttpResponseException httpError) {
+                log.error("❌ Código HTTP: {}", httpError.getStatusCode());
+                log.error("❌ Respuesta API: {}", httpError.getContent());
+            }
+
+            // 🔥 3. Lanzar tu excepción como antes
+            throw new GoogleFormsException("Error al comunicarse con Google Forms: " + e.getMessage(), e);
         }
     }
     // --------------------------------------------------------
@@ -294,4 +325,56 @@ public class GoogleFormsClient {
                         )
                 );
     }
+
+    private Item campoComboProgramaConSaltos(List<Programa> programas) {
+        List<Option> opciones = new ArrayList<>();
+        for (Programa p : programas) {
+            opciones.add(new Option().setValue(p.getNombre())); // saltos se agregan luego
+        }
+
+        return new Item()
+                .setTitle("Programa académico")
+                .setQuestionItem(new QuestionItem()
+                        .setQuestion(new Question()
+                                .setRequired(true)
+                                .setChoiceQuestion(new ChoiceQuestion()
+                                        .setType("DROP_DOWN")
+                                        .setOptions(opciones)
+                                )
+                        )
+                );
+    }
+
+    private List<Request> crearSaltosDePrograma(List<Programa> programas, Map<Long, String> seccionPorPrograma, String programaItemId, int indicePrograma) {
+        List<Request> requests = new ArrayList<>();
+
+        List<Option> opcionesActualizadas = new ArrayList<>();
+        for (Programa p : programas) {
+            opcionesActualizadas.add(
+                    new Option()
+                            .setValue(p.getNombre())
+                            .setGoToSectionId(seccionPorPrograma.get(p.getId()))
+            );
+        }
+
+        requests.add(new Request().setUpdateItem(
+                new UpdateItemRequest()
+                        .setItem(new Item()
+                                .setItemId(programaItemId) // <- indicamos qué item actualizar
+                                .setQuestionItem(new QuestionItem()
+                                        .setQuestion(new Question()
+                                                .setChoiceQuestion(new ChoiceQuestion()
+                                                        .setType("DROP_DOWN")
+                                                        .setOptions(opcionesActualizadas)
+                                                )
+                                        )
+                                )
+                        )
+                        .setLocation(new Location().setIndex(indicePrograma)) // ← REQUERIDO
+                        .setUpdateMask("questionItem.question.choiceQuestion.options")
+        ));
+
+        return requests;
+    }
+
 }

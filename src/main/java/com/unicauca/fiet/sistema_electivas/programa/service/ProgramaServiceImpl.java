@@ -3,6 +3,8 @@ package com.unicauca.fiet.sistema_electivas.programa.service;
 import com.unicauca.fiet.sistema_electivas.common.exception.InvalidStateException;
 import com.unicauca.fiet.sistema_electivas.electiva.model.Electiva;
 import com.unicauca.fiet.sistema_electivas.electiva.repository.ProgramaElectivaRepository;
+import com.unicauca.fiet.sistema_electivas.periodo_academico.enums.EstadoPeriodoAcademico;
+import com.unicauca.fiet.sistema_electivas.periodo_academico.repository.PeriodoAcademicoRepository;
 import com.unicauca.fiet.sistema_electivas.programa.dto.ProgramaDisableResponse;
 import com.unicauca.fiet.sistema_electivas.programa.dto.ProgramaRequest;
 import com.unicauca.fiet.sistema_electivas.programa.dto.ProgramaResponse;
@@ -16,6 +18,7 @@ import com.unicauca.fiet.sistema_electivas.programa.model.Programa;
 import com.unicauca.fiet.sistema_electivas.programa.repository.ProgramaRepository;
 import com.unicauca.fiet.sistema_electivas.electiva.enums.EstadoElectiva;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -25,6 +28,8 @@ import java.util.List;
 public class ProgramaServiceImpl implements ProgramaService {
     private final ProgramaRepository programaRepository;
     private final ProgramaElectivaRepository programaElectivaRepository;
+    @Autowired
+    private PeriodoAcademicoRepository periodoAcademicoRepository;
     /**
      * Crea un nuevo programa académico en el sistema.
      *
@@ -67,7 +72,7 @@ public class ProgramaServiceImpl implements ProgramaService {
         // 4️ Guardar la entidad
         Programa saved = programaRepository.save(programa);
 
-        // 5️⃣ Convertir la entidad guardada a DTO de respuesta
+        // 5. Convertir la entidad guardada a DTO de respuesta
         return ProgramaMapper.toResponse(saved);
     }
 
@@ -98,17 +103,22 @@ public class ProgramaServiceImpl implements ProgramaService {
                         "Programa con id " + id + " no encontrado"
                 ));
 
-        // 2️ Validar que no esté deshabilitado
+        // 2. Validar que no haya un período académico activo
+        if (periodoAcademicoRepository.existsByEstadoIn(EstadoPeriodoAcademico.obtenerEstadosActivos())) {
+            throw new InvalidStateException("No se puede editar programas cuando hay un periodo académico ACTIVO en cualquiera de sus etapas.");
+        }
+
+        // 3 Validar que no esté deshabilitado
         if (programa.getEstado() == EstadoPrograma.DESHABILITADO) {
             throw new InvalidStateException("No se puede editar un programa deshabilitado.");
         }
 
-        // 3️ Validar campo obligatorio
+        // 4 Validar campo obligatorio
         if (request.getNombre() == null || request.getNombre().isBlank()) {
             throw new BusinessException("Complete todos los campos obligatorios.");
         }
 
-        // 4️ Validar duplicado en nombre
+        // 5 Validar duplicado en nombre
         programaRepository.findByNombre(request.getNombre())
                 .filter(p -> !p.getId().equals(id))
                 .ifPresent(p -> {
@@ -117,13 +127,13 @@ public class ProgramaServiceImpl implements ProgramaService {
                     );
                 });
 
-        // 5️ Actualizar la entidad usando el mapper
+        // 6 Actualizar la entidad usando el mapper
         ProgramaMapper.updateEntity(programa, request);
 
-        // 6️ Guardar cambios
+        // 7 Guardar cambios
         Programa actualizado = programaRepository.save(programa);
 
-        // 7️ Convertir a DTO de respuesta usando el mapper
+        // 8 Convertir a DTO de respuesta usando el mapper
         return ProgramaMapper.toResponse(actualizado);
     }
 
@@ -147,23 +157,28 @@ public class ProgramaServiceImpl implements ProgramaService {
         Programa programa = programaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Programa con id " + id + " no encontrado"));
 
-        // 2️ Validar si ya está deshabilitado
+        // 2. Validar que no haya un período academico activo
+        if (periodoAcademicoRepository.existsByEstadoIn(EstadoPeriodoAcademico.obtenerEstadosActivos())) {
+            throw new InvalidStateException("No se puede deshabilitar programas cuando hay un periodo académico ACTIVO en cualquiera de sus etapas.");
+        }
+
+        // ️3. Validar si ya está deshabilitado
         if (programa.getEstado() == EstadoPrograma.DESHABILITADO) {
             throw new InvalidStateException("El programa ya está deshabilitado.");
         }
 
-        // 3️ Validar electivas activas asociadas
+        // 4. Validar electivas activas asociadas
         int electivasActivas = programaElectivaRepository.countElectivasActivasByProgramaId(id, EstadoElectiva.APROBADA);
         if (electivasActivas > 0) {
             throw new BusinessException("No se puede deshabilitar el programa porque tiene "
                     + electivasActivas + " electivas activas asociadas. Desasócialas o deshabilítalas primero.");
         }
 
-        // 4️ Deshabilitar el programa
+        // 5. Deshabilitar el programa
         programa.setEstado(EstadoPrograma.DESHABILITADO);
         programaRepository.save(programa);
 
-        // 5️ Retornar respuesta
+        // 6. Retornar respuesta
         return new ProgramaDisableResponse(
                 programa.getId(),
                 programa.getNombre()

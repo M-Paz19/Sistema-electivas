@@ -108,7 +108,7 @@ public interface PlanEstudioService {
      * @param configuracion informacion de la configuración del plan
      * @return MallaUploadResponse con resumen del procesamiento
      */
-    public MallaUploadResponse cargarMallaCurricular(
+    MallaUploadResponse cargarMallaCurricular(
             Long programaId,
             Long planId,
             MultipartFile file,

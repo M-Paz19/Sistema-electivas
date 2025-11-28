@@ -15,7 +15,6 @@ import com.unicauca.fiet.sistema_electivas.periodo_academico.model.PeriodoAcadem
 import java.util.List;
 /**
  * Servicio de gestión de oferta academica en periodos academicos.
- *
  * Define las operaciones principales sobre la entidad {@link Oferta}.
  */
 public interface OfertaAcademicaService {
@@ -50,6 +49,7 @@ public interface OfertaAcademicaService {
      * @throws IllegalArgumentException si los cupos son inválidos o no coinciden con los programas asociados.
      */
     OfertaResponse agregarElectivaOfertada(Long periodoId, OfertaRequestDTO dto);
+
     /**
      * Edita los cupos por programa de una electiva ofertada.
      *
@@ -60,6 +60,7 @@ public interface OfertaAcademicaService {
      * @return DTO actualizado de la electiva ofertada
      */
     OfertaResponse editarCupos(Long ofertadaId, EditarCuposDTO dto);
+
     /**
      * Elimina una electiva ofertada de un período.
      *
@@ -68,6 +69,7 @@ public interface OfertaAcademicaService {
      * @param ofertadaId ID de la electiva ofertada
      */
     void eliminarElectivaOfertada(Long ofertadaId);
+
     /**
      * Lista todas las electivas ofertadas pertenecientes a un período académico.
      *
