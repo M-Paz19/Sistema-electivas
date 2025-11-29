@@ -9,6 +9,7 @@ import com.unicauca.fiet.sistema_electivas.common.exception.DuplicateResourceExc
 import com.unicauca.fiet.sistema_electivas.common.exception.InvalidStateException;
 import com.unicauca.fiet.sistema_electivas.common.exception.ResourceNotFoundException;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.model.PeriodoAcademico;
+import io.opencensus.resource.Resource;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;

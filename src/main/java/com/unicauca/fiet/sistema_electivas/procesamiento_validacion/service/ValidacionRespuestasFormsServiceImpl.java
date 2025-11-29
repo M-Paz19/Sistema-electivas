@@ -39,9 +39,6 @@ public class ValidacionRespuestasFormsServiceImpl implements ValidacionRespuesta
     @Autowired
     private ArchivoService archivoService;
 
-    /**
-     * {@inheritDoc}
-     */
     @Transactional
     @Override
     public List<RespuestaFormularioResponse> obtenerRespuestasPorPeriodo(Long periodoId) {
@@ -49,25 +46,27 @@ public class ValidacionRespuestasFormsServiceImpl implements ValidacionRespuesta
         return RespuestaFormularioMapper.toResponseList(entidades);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Transactional
     @Override
     public CambioEstadoValidacionResponse aplicarFiltroDuplicados(Long idPeriodo) {
         PeriodoAcademico periodo = periodoRepository.findById(idPeriodo)
                 .orElseThrow(() -> new ResourceNotFoundException("Periodo no encontrado"));
 
-        if (periodo.getEstado() != EstadoPeriodoAcademico.CERRADO_FORMULARIO) {
+        if (periodo.getEstado() != EstadoPeriodoAcademico.CERRADO_FORMULARIO &&
+                periodo.getEstado() != EstadoPeriodoAcademico.PROCESO_FILTRADO_DUPLICADOS) {
             throw new InvalidStateException("El filtro de duplicados solo puede aplicarse cuando el formulario está cerrado.");
         }
 
-        List<RespuestasFormulario> respuestas = respuestasRepository
-                .findByPeriodoIdAndEstado(idPeriodo, EstadoRespuestaFormulario.SIN_PROCESAR);
+        List<RespuestasFormulario> respuestas = respuestasRepository.findByPeriodoId(idPeriodo).stream()
+                .filter(r -> r.getEstado() == EstadoRespuestaFormulario.SIN_PROCESAR ||
+                        r.getEstado() == EstadoRespuestaFormulario.UNICO ||
+                        r.getEstado() == EstadoRespuestaFormulario.DUPLICADO)
+                .collect(Collectors.toList());
 
         if (respuestas.isEmpty()) {
-            throw new BusinessException("No hay respuestas sin procesar para este período.");
+            // Si está vacío, no es error, simplemente no hay nada que procesar
         }
+
         Map<String, List<RespuestasFormulario>> agrupadas = respuestas.stream()
                 .collect(Collectors.groupingBy(RespuestasFormulario::getCodigoEstudiante));
 
@@ -77,7 +76,9 @@ public class ValidacionRespuestasFormsServiceImpl implements ValidacionRespuesta
         for (var entry : agrupadas.entrySet()) {
             List<RespuestasFormulario> grupo = entry.getValue();
             grupo.sort(Comparator.comparing(RespuestasFormulario::getTimestampRespuesta));
+
             RespuestasFormulario primera = grupo.get(0);
+            primera.setEstado(EstadoRespuestaFormulario.UNICO);
             conservadas++;
 
             for (int i = 1; i < grupo.size(); i++) {
@@ -85,17 +86,15 @@ public class ValidacionRespuestasFormsServiceImpl implements ValidacionRespuesta
                 duplicada.setEstado(EstadoRespuestaFormulario.DUPLICADO);
                 duplicadosEliminados++;
             }
-
-            primera.setEstado(EstadoRespuestaFormulario.UNICO);
         }
 
         respuestasRepository.saveAll(respuestas);
 
-        System.out.printf("X=%d registros duplicados eliminados. Y=%d registros únicos conservados.%n",
-                duplicadosEliminados, conservadas);
+        if (periodo.getEstado() == EstadoPeriodoAcademico.CERRADO_FORMULARIO) {
+            periodo.setEstado(EstadoPeriodoAcademico.PROCESO_FILTRADO_DUPLICADOS);
+            periodoRepository.save(periodo);
+        }
 
-        periodo.setEstado(EstadoPeriodoAcademico.PROCESO_FILTRADO_DUPLICADOS);
-        periodoRepository.save(periodo);
         return ValidacionProcesamientoMapper.toCambioEstadoResponse(
                 periodo,
                 String.format("Filtrado completado: %d duplicados eliminados, %d registros únicos conservados.",
@@ -103,62 +102,54 @@ public class ValidacionRespuestasFormsServiceImpl implements ValidacionRespuesta
         );
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Transactional
     @Override
     public CambioEstadoValidacionResponse aplicarFiltroCodigosPorAntiguedad(Long idPeriodo) {
-        // Buscar el período
         PeriodoAcademico periodo = periodoRepository.findById(idPeriodo)
                 .orElseThrow(() -> new ResourceNotFoundException("Periodo no encontrado"));
 
-        // Validar estado del período
-        if (periodo.getEstado() != EstadoPeriodoAcademico.PROCESO_FILTRADO_DUPLICADOS) {
+        if (periodo.getEstado() != EstadoPeriodoAcademico.PROCESO_FILTRADO_DUPLICADOS &&
+                periodo.getEstado() != EstadoPeriodoAcademico.PROCESO_CLASIFICACION_ANTIGUEDAD) {
             throw new InvalidStateException(
                     "El filtro de código estudiantil solo puede aplicarse cuando ya se aplicó el filtro de duplicados."
             );
         }
 
-        // Obtener respuestas únicas del período
-        List<RespuestasFormulario> respuestas = respuestasRepository
-                .findByPeriodoIdAndEstado(idPeriodo, EstadoRespuestaFormulario.UNICO);
+        List<RespuestasFormulario> respuestas = respuestasRepository.findByPeriodoId(idPeriodo).stream()
+                .filter(r -> r.getEstado() == EstadoRespuestaFormulario.UNICO ||
+                        r.getEstado() == EstadoRespuestaFormulario.CUMPLE ||
+                        r.getEstado() == EstadoRespuestaFormulario.NO_CUMPLE ||
+                        r.getEstado() == EstadoRespuestaFormulario.FORMATO_INVALIDO)
+                .collect(Collectors.toList());
 
-        if (respuestas.isEmpty()) {
-            throw new BusinessException("No hay respuestas únicas válidas para este período.");
-        }
-
-        // Patrón de código estudiantil: 104621011351 → año ingreso = 21, periodo = 01
         Pattern patron = Pattern.compile("^\\d{4}(\\d{2})(0[1-2])\\d{4}$");
-
-        // Extraer año y periodo actual del formato "2027-1"
         String[] partes = periodo.getSemestre().split("-");
         int anioActual = Integer.parseInt(partes[0]);
         int periodoActual = Integer.parseInt(partes[1]);
 
-        // Clasificación por antigüedad
         respuestas.forEach(r -> {
+            // Si ya fue incluido manualmente, no lo tocamos
+            if (r.getEstado() == EstadoRespuestaFormulario.INCLUIDO) return;
+
             String codigo = r.getCodigoEstudiante();
             Matcher matcher = patron.matcher(codigo);
 
             if (!matcher.matches()) {
                 r.setEstado(EstadoRespuestaFormulario.FORMATO_INVALIDO);
-                return;
+            } else {
+                int anioIngreso = 2000 + Integer.parseInt(matcher.group(1));
+                int periodoIngreso = Integer.parseInt(matcher.group(2));
+                int semestres = ((anioActual - anioIngreso) * 2) + (periodoActual - periodoIngreso);
+                r.setEstado(semestres >= 6 ? EstadoRespuestaFormulario.CUMPLE : EstadoRespuestaFormulario.NO_CUMPLE);
             }
-
-            int anioIngreso = 2000 + Integer.parseInt(matcher.group(1));  // 21 → 2021
-            int periodoIngreso = Integer.parseInt(matcher.group(2));      // 01 → 1, 02 → 2
-
-            int semestres = ((anioActual - anioIngreso) * 2) + (periodoActual - periodoIngreso);
-            r.setEstado(semestres >= 6
-                    ? EstadoRespuestaFormulario.CUMPLE
-                    : EstadoRespuestaFormulario.NO_CUMPLE);
         });
 
-        // Persistir resultados y actualizar el estado del período
         respuestasRepository.saveAll(respuestas);
-        periodo.setEstado(EstadoPeriodoAcademico.PROCESO_CLASIFICACION_ANTIGUEDAD);
-        periodoRepository.save(periodo);
+
+        if (periodo.getEstado() == EstadoPeriodoAcademico.PROCESO_FILTRADO_DUPLICADOS) {
+            periodo.setEstado(EstadoPeriodoAcademico.PROCESO_CLASIFICACION_ANTIGUEDAD);
+            periodoRepository.save(periodo);
+        }
 
         return ValidacionProcesamientoMapper.toCambioEstadoResponse(
                 periodo,
@@ -166,102 +157,105 @@ public class ValidacionRespuestasFormsServiceImpl implements ValidacionRespuesta
         );
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Transactional
     @Override
     public RespuestaFormularioDesicionResponse revisarManualFormatoInvalido(Long respuestaId, boolean incluir, @Nullable String nuevoCodigo) {
-        // Buscar respuesta
         RespuestasFormulario respuesta = respuestasRepository.findById(respuestaId)
-                .orElseThrow(() -> new ResourceNotFoundException("Respuesta no encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException("Respuesta no encontrada"));
 
-        // Validar que esté en el estado correcto
-        if (respuesta.getEstado() != EstadoRespuestaFormulario.FORMATO_INVALIDO) {
-            throw new InvalidStateException("Solo se pueden revisar respuestas con formato desconocido.");
+        // Validación de estado relajada para permitir correcciones
+        if (respuesta.getEstado() != EstadoRespuestaFormulario.FORMATO_INVALIDO &&
+                respuesta.getEstado() != EstadoRespuestaFormulario.INCLUIDO &&
+                respuesta.getEstado() != EstadoRespuestaFormulario.SIN_PROCESAR) {
+            // Permitimos editar si está en uno de estos estados
         }
 
-        // Aplicar decisión
         if (incluir) {
+            if (nuevoCodigo == null || nuevoCodigo.trim().isEmpty()) {
+                throw new BusinessException("Para incluir al estudiante, debe proporcionar un código válido.");
+            }
+
+            String codigoLimpio = nuevoCodigo.trim();
+
+            // CORRECCIÓN: Verificar duplicados EXCLUYENDO la respuesta actual
+            // Usamos stream filter para mayor seguridad si el repo no tiene el método custom
+            boolean existe = respuestasRepository.findByPeriodoId(respuesta.getPeriodo().getId()).stream()
+                    .anyMatch(r -> r.getCodigoEstudiante().equals(codigoLimpio)
+                            && !r.getId().equals(respuestaId) // Importante: excluir la actual
+                            && (r.getEstado() == EstadoRespuestaFormulario.UNICO ||
+                            r.getEstado() == EstadoRespuestaFormulario.CUMPLE ||
+                            r.getEstado() == EstadoRespuestaFormulario.INCLUIDO ||
+                            r.getEstado() == EstadoRespuestaFormulario.DATOS_CARGADOS));
+
+            if (existe) {
+                throw new BusinessException("El código " + codigoLimpio + " ya existe y está activo en este periodo.");
+            }
+
+            respuesta.setCodigoEstudiante(codigoLimpio);
             respuesta.setEstado(EstadoRespuestaFormulario.INCLUIDO);
         } else {
             respuesta.setEstado(EstadoRespuestaFormulario.DESCARTADO);
         }
 
-        respuestasRepository.save(respuesta);
-        return RespuestaFormularioMapper.toRespuestaFormularioResponse(respuesta);
+        // Guardar cambios inmediatamente
+        RespuestasFormulario guardada = respuestasRepository.saveAndFlush(respuesta);
+
+        return ValidacionProcesamientoMapper.toDecisionResponse(guardada,
+                incluir ? "Estudiante incluido." : "Estudiante descartado.");
     }
 
-
-    /**
-     * {@inheritDoc}
-     */
     @Transactional
     @Override
     public CambioEstadoValidacionResponse confirmarListaParaSimca(Long idPeriodo) {
         PeriodoAcademico periodo = periodoRepository.findById(idPeriodo)
                 .orElseThrow(() -> new ResourceNotFoundException("Periodo académico no encontrado."));
 
-        // 1. Validar estado del periodo
-        if (periodo.getEstado() != EstadoPeriodoAcademico.PROCESO_CLASIFICACION_ANTIGUEDAD) {
-            throw new InvalidStateException("El período no está listo para la confirmación final. Debe haberse completado la clasificación de antigüedad.");
+        // Validar estado
+        if (periodo.getEstado() != EstadoPeriodoAcademico.PROCESO_CLASIFICACION_ANTIGUEDAD &&
+                periodo.getEstado() != EstadoPeriodoAcademico.PROCESO_CONFIRMACION_SIMCA) {
+            throw new InvalidStateException("El período no está listo para la confirmación final.");
         }
 
-        // 2. Verificar respuestas pendientes
-        List<RespuestasFormulario> pendientes = respuestasRepository
-                .findByPeriodoIdAndEstado(idPeriodo, EstadoRespuestaFormulario.FORMATO_INVALIDO);
+        long pendientes = respuestasRepository.findByPeriodoId(idPeriodo).stream()
+                .filter(r -> r.getEstado() == EstadoRespuestaFormulario.FORMATO_INVALIDO)
+                .count();
 
-        if (!pendientes.isEmpty()) {
+        if (pendientes > 0) {
             throw new InvalidStateException(
-                    "Faltan " + pendientes.size() + " respuestas por revisar manualmente antes de confirmar la lista para SIMCA."
+                    "Faltan " + pendientes + " respuestas por revisar manualmente antes de confirmar la lista."
             );
         }
 
-        // 3. Obtener todos los códigos válidos (CUMPLE o INCLUIDO_MANUAL)
-        List<String> codigosValidos = respuestasRepository.findCodigosByPeriodoAndEstados(
-                idPeriodo,
-                List.of(
-                        EstadoRespuestaFormulario.CUMPLE,
-                        EstadoRespuestaFormulario.INCLUIDO
-                )
-        );
+        // Obtener códigos válidos: CUMPLE o INCLUIDO
+        List<String> codigosValidos = respuestasRepository.findByPeriodoId(idPeriodo).stream()
+                .filter(r -> r.getEstado() == EstadoRespuestaFormulario.CUMPLE ||
+                        r.getEstado() == EstadoRespuestaFormulario.INCLUIDO)
+                .map(RespuestasFormulario::getCodigoEstudiante)
+                .distinct()
+                .collect(Collectors.toList());
 
-        // 4. Obtener cantidad de descartados (para el mensaje)
         long descartados = respuestasRepository.countByPeriodoIdAndEstadoIn(
                 idPeriodo,
-                List.of(
-                        EstadoRespuestaFormulario.DESCARTADO,
-                        EstadoRespuestaFormulario.NO_CUMPLE,
-                        EstadoRespuestaFormulario.DUPLICADO
-                )
+                List.of(EstadoRespuestaFormulario.DESCARTADO, EstadoRespuestaFormulario.NO_CUMPLE, EstadoRespuestaFormulario.DUPLICADO)
         );
+
         if (codigosValidos.isEmpty()) {
             throw new InvalidStateException("No hay códigos válidos para generar lotes SIMCA.");
         }
 
-        // 5. Dividir en lotes de 50
         List<List<String>> lotes = dividirEnLotes(codigosValidos, 50);
-
-        // 6. Generar archivos de lotes con ArchivoService
         archivoService.generarArchivosLotesSimca(lotes, periodo);
 
-        // 7. Cambiar estado del periodo
         periodo.setEstado(EstadoPeriodoAcademico.PROCESO_CONFIRMACION_SIMCA);
         periodoRepository.save(periodo);
-        // 8. Construir mensaje informativo
+
         String mensajeFinal = String.format(
-                "Confirmación final realizada. Se generaron %d lotes con %d códigos válidos para SIMCA. "
-                        + "Se descartaron %d respuestas por no cumplir los criterios.",
-                lotes.size(),
-                codigosValidos.size(),
-                descartados
+                "Confirmación final realizada. Se generaron %d lotes con %d códigos válidos. Se descartaron %d respuestas.",
+                lotes.size(), codigosValidos.size(), descartados
         );
-        return ValidacionProcesamientoMapper.toCambioEstadoResponse(periodo,mensajeFinal);
+        return ValidacionProcesamientoMapper.toCambioEstadoResponse(periodo, mensajeFinal);
     }
 
-    /**
-     * Divide una lista en sublistas de tamaño máximo definido.
-     */
     private List<List<String>> dividirEnLotes(List<String> lista, int tamLote) {
         List<List<String>> lotes = new ArrayList<>();
         for (int i = 0; i < lista.size(); i += tamLote) {
@@ -269,6 +263,4 @@ public class ValidacionRespuestasFormsServiceImpl implements ValidacionRespuesta
         }
         return lotes;
     }
-
-
 }
