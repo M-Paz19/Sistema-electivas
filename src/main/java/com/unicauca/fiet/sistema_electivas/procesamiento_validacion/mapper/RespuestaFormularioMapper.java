@@ -51,7 +51,7 @@ public class RespuestaFormularioMapper {
                 entidad.getPrograma() != null ? entidad.getPrograma().getNombre() : null,
                 entidad.getPeriodo() != null ? entidad.getPeriodo().getSemestre() : null,
                 entidad.getTimestampRespuesta(),
-                entidad.getEstado().getDescripcion(),
+                entidad.getEstado().name(),
                 electivasSeleccionadas
         );
     }

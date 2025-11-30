@@ -3,6 +3,8 @@ package com.unicauca.fiet.sistema_electivas.procesamiento_validacion.mapper;
 
 import com.unicauca.fiet.sistema_electivas.periodo_academico.model.PeriodoAcademico;
 import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.dto.CambioEstadoValidacionResponse;
+import com.unicauca.fiet.sistema_electivas.procesamiento_validacion.dto.RespuestaFormularioDesicionResponse;
+import com.unicauca.fiet.sistema_electivas.periodo_academico.model.RespuestasFormulario;
 /**
  * Clase utilitaria para convertir entidades del dominio de validación y procesamiento
  * en objetos de respuesta (DTOs) adecuados para la capa de presentación.
@@ -45,4 +47,35 @@ public class ValidacionProcesamientoMapper {
                 .mensaje(mensaje)
                 .build();
     }
+
+    /**
+     * Convierte una entidad {@link RespuestasFormulario} a un DTO {@link RespuestaFormularioDesicionResponse}.
+     *
+     * <p>Se utiliza para devolver el resultado de una decisión manual sobre una respuesta
+     * (por ejemplo, incluir o descartar un estudiante con código inválido).</p>
+     *
+     * @param respuesta la respuesta del formulario procesada
+     * @param mensaje mensaje descriptivo del resultado de la decisión
+     * @return DTO con la información de la respuesta y el mensaje de estado
+     */
+    public static RespuestaFormularioDesicionResponse toDecisionResponse(
+            RespuestasFormulario respuesta,
+            String mensaje
+    )   {
+        if (respuesta == null) {
+            return null;
+        }
+
+        return RespuestaFormularioDesicionResponse.builder()
+                .id(respuesta.getId())
+                .codigoEstudiante(respuesta.getCodigoEstudiante())
+                .correoEstudiante(respuesta.getCorreoEstudiante())
+                .nombreCompleto(respuesta.getNombreEstudiante() + " " + respuesta.getApellidosEstudiante())
+                .estado(respuesta.getEstado().name())
+                .mensaje(mensaje)
+                .build();
+    }
+
+
+
 }

@@ -30,12 +30,12 @@ public class OfertaAcademicaController {
      * que no haya duplicados, y ajusta los cupos por programa.</p>
      *
      * @param periodoId ID del período académico
-     * @param dto DTO con la electiva y los cupos por programa (opcional)
+     * @param dto       DTO con la electiva y los cupos por programa (opcional)
      * @return Detalle de la electiva ofertada creada
      * @throws ResourceNotFoundException si el período o la electiva no existen
-     * @throws InvalidStateException si el período no está en estado CONFIGURACION
-     * @throws BusinessException si la electiva no está aprobada o ya existe en este periodo
-     * @throws IllegalArgumentException si los cupos son inválidos
+     * @throws InvalidStateException     si el período no está en estado CONFIGURACION
+     * @throws BusinessException         si la electiva no está aprobada o ya existe en este periodo
+     * @throws IllegalArgumentException  si los cupos son inválidos
      */
     @PostMapping("/periodos/{periodoId}/ofertas")
     public ResponseEntity<OfertaResponse> agregarElectivaOfertada(
@@ -69,6 +69,7 @@ public class OfertaAcademicaController {
         ofertaService.eliminarElectivaOfertada(ofertaId);
         return ResponseEntity.ok(Map.of("mensaje", "Electiva ofertada eliminada correctamente"));
     }
+
     /**
      * Obtiene todas las electivas ofertadas de un período académico específico.
      *

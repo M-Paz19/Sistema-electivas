@@ -9,22 +9,19 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 
 @Repository
-public interface RespuestasFormularioRepository  extends JpaRepository<RespuestasFormulario, Long> {
+public interface RespuestasFormularioRepository extends JpaRepository<RespuestasFormulario, Long> {
+
     /**
      * Recupera todas las respuestas asociadas a un período académico,
      * cargando de forma anticipada (fetch) las relaciones necesarias
      * para evitar problemas de rendimiento (N+1 queries).
      */
     @EntityGraph(attributePaths = {
-            "programa",                  // carga el programa del estudiante
-            "periodo",                   // carga el período académico
-            "opciones",                  // carga las opciones elegidas
-            "opciones.oferta",           // carga la oferta de cada opción
-            "opciones.oferta.electiva"   // carga la electiva asociada a la oferta
+            "programa", "periodo", "opciones", "opciones.oferta", "opciones.oferta.electiva"
     })
     List<RespuestasFormulario> findByPeriodoId(Long periodoId);
 
@@ -69,11 +66,13 @@ public interface RespuestasFormularioRepository  extends JpaRepository<Respuesta
             @Param("periodoId") Long periodoId,
             @Param("estados") List<EstadoRespuestaFormulario> estados
     );
+
     /**
      * Devuelve la cantidqd de códigos de estudiante ven los estados que se pidan
      * para un periodo académico específico.
      */
     long countByPeriodoIdAndEstadoIn(Long periodoId, List<EstadoRespuestaFormulario> estados);
+
     List<RespuestasFormulario> findByPeriodoIdAndEstadoIn(Long periodoId, List<EstadoRespuestaFormulario> estados);
 
     /**
@@ -90,9 +89,18 @@ public interface RespuestasFormularioRepository  extends JpaRepository<Respuesta
      * @return true si existe una coincidencia.
      */
     boolean existsByPeriodoIdAndCodigoEstudianteAndEstado(
-            Long periodoId,
-            String codigoEstudiante,
-            EstadoRespuestaFormulario estado
+            Long periodoId, String codigoEstudiante, EstadoRespuestaFormulario estado
+    );
+
+    // MÉTODO NUEVO: Valida si existe el código en otro registro distinto al actual (para edición)
+    boolean existsByPeriodoIdAndCodigoEstudianteAndIdNot(
+            Long periodoId, String codigoEstudiante, Long id
+    );
+
+
+    // Validar duplicados exactos al importar
+    boolean existsByPeriodoAndCodigoEstudianteAndTimestampRespuesta(
+            PeriodoAcademico periodo, String codigoEstudiante, Instant timestampRespuesta
     );
 
     /**
@@ -106,7 +114,7 @@ public interface RespuestasFormularioRepository  extends JpaRepository<Respuesta
      * @return true si hay alguna respuesta en esos estados.
      */
     boolean existsByPeriodoIdAndEstadoIn(Long periodoId, List<EstadoRespuestaFormulario> estados);
-
+    
     /**
      * Obtiene todas las respuestas de un período académico filtradas por estado,
      * incluyendo la carga anticipada (fetch) de sus opciones seleccionadas.
@@ -164,5 +172,7 @@ public interface RespuestasFormularioRepository  extends JpaRepository<Respuesta
            OR LOWER(r.apellidosEstudiante) LIKE LOWER(CONCAT('%', :filtro, '%'))
     """)
     List<RespuestasFormulario> buscarCoincidencias(String filtro);
+    
 
 }
+

@@ -99,4 +99,6 @@ public interface ValidacionRespuestasFormsService {
      * @throws InvalidStateException Si todavía existen registros pendientes de revisión manual.
      */
     CambioEstadoValidacionResponse confirmarListaParaSimca(Long idPeriodo);
+
+
 }
