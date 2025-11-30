@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.*;
 import java.util.*;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -52,6 +53,9 @@ public class PeriodoAcademicoServiceImpl implements PeriodoAcademicoService {
     private FormularioImportService formularioImportService;
     @Autowired
     private ProgramaElectivaRepository programaElectivaRepository;
+    private final ReentrantLock lockCerrarFormulario = new ReentrantLock();
+
+
 
     /**
      * {@inheritDoc}
@@ -279,42 +283,57 @@ public class PeriodoAcademicoServiceImpl implements PeriodoAcademicoService {
     @Override
     @Transactional
     public CambioEstadoResponse cerrarFormulario(Long periodoId) {
-        PeriodoAcademico periodo = periodoRepository.findById(periodoId)
-                .orElseThrow(() -> new ResourceNotFoundException("Período no encontrado"));
 
-        if (periodo.getEstado() != EstadoPeriodoAcademico.ABIERTO_FORMULARIO) {
-            throw new InvalidStateException("Solo se puede cerrar un período en estado ABIERTO.");
+        // Intentar adquirir el lock sin bloquear
+        boolean obtenido = lockCerrarFormulario.tryLock();
+        if (!obtenido) {
+            throw new InvalidStateException(
+                    "El cierre del formulario ya está en proceso. Por favor espere."
+            );
         }
-        // Si no se pudo extraer de la URL, intentamos usar el ID guardado directamente
-        String formId = periodo.getFormId();
-        if (formId == null || formId.isEmpty()) {
-            throw new InvalidStateException("No se puede cerrar el formulario: no se ha configurado un URL válido.");
-        }
-        // 1. Cerrar formulario en Google
+
         try {
-            // flujo automático
-            googleFormsClient.cerrarFormulario(formId);
+            // --- AQUI COMIENZA LA SECCIÓN CRÍTICA ---
+            PeriodoAcademico periodo = periodoRepository.findById(periodoId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Período no encontrado"));
 
-            List<Map<String, String>> datos = googleFormsClient.obtenerRespuestas(formId);
-            if (datos.isEmpty()) throw new GoogleFormsException("No se encontraron respuestas.");
+            if (periodo.getEstado() != EstadoPeriodoAcademico.ABIERTO_FORMULARIO) {
+                throw new InvalidStateException("Solo se puede cerrar un período en estado ABIERTO.");
+            }
 
-            CargaArchivo archivo = archivoService.guardarArchivoRespuestas(datos, periodo);
-            formularioImportService.procesarRespuestas(datos, periodo, archivo);
-        } catch (GoogleFormsException ex) {
-            // Fallback: solicitar carga manual
-            log.warn("Fallo en obtención automática de respuestas. Requiere carga manual. Causa: {}", ex.getMessage());
-            throw new InvalidStateException("No fue posible obtener respuestas automáticamente. Por favor cargue manualmente las respuestas.");
+            String formId = periodo.getFormId();
+            if (formId == null || formId.isEmpty()) {
+                throw new InvalidStateException("No se puede cerrar el formulario: no se ha configurado un URL válido.");
+            }
+
+            try {
+                googleFormsClient.cerrarFormulario(formId);
+
+                List<Map<String, String>> datos = googleFormsClient.obtenerRespuestas(formId);
+                if (datos.isEmpty()) {
+                    throw new GoogleFormsException("No se encontraron respuestas.");
+                }
+
+                CargaArchivo archivo = archivoService.guardarArchivoRespuestas(datos, periodo);
+                formularioImportService.procesarRespuestas(datos, periodo, archivo);
+
+            } catch (GoogleFormsException ex) {
+                log.warn("Fallo en obtención automática de respuestas. Requiere carga manual: {}", ex.getMessage());
+                throw new InvalidStateException("No fue posible obtener respuestas automáticamente. Por favor cargue manualmente las respuestas.");
+            }
+
+            periodo.setEstado(EstadoPeriodoAcademico.CERRADO_FORMULARIO);
+            periodoRepository.save(periodo);
+
+            return PeriodoAcademicoMapper.toCambioEstadoResponse(
+                    periodo,
+                    "Período " + periodo.getSemestre() + " cerrado correctamente."
+            );
+
+        } finally {
+            // 🔓 liberar SIEMPRE aunque haya error
+            lockCerrarFormulario.unlock();
         }
-
-        // 3. Cambiar estado del período a CERRADO_FORMULARIO SIEMPRE
-        // Esto asegura que la transacción se complete y el estado cambie
-        periodo.setEstado(EstadoPeriodoAcademico.CERRADO_FORMULARIO);
-        periodoRepository.save(periodo);
-
-        return PeriodoAcademicoMapper.toCambioEstadoResponse(
-                periodo,
-                "Período " + periodo.getSemestre() + " cerrado. Si no hubo respuestas automáticas, use la carga manual."
-        );
     }
 
 

@@ -50,14 +50,7 @@ public class FormularioImportService {
 
 
             Instant finalFechaRespuesta = parsearFechaFlexible(datos.get("timestampRespuesta"));
-            boolean existe = respuestaRepository.findByPeriodoId(periodo.getId()).stream()
-                    .anyMatch(r -> r.getCodigoEstudiante().equals(codigoEst) &&
-                            Math.abs(r.getTimestampRespuesta().toEpochMilli() - finalFechaRespuesta.toEpochMilli()) < 1000); // Tolerancia de 1s
 
-            if (existe) {
-                log.info("Respuesta duplicada omitida para el estudiante: {}", codigoEst);
-                continue;
-            }
 
             RespuestasFormulario r = new RespuestasFormulario();
             r.setPeriodo(periodo);
