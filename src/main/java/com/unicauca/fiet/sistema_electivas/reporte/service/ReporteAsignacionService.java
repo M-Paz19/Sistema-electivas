@@ -1,11 +1,10 @@
-package com.unicauca.fiet.sistema_electivas.asignacion.service;
+package com.unicauca.fiet.sistema_electivas.reporte.service;
 
-import com.unicauca.fiet.sistema_electivas.asignacion.dto.ReporteArchivoResponse;
+import com.unicauca.fiet.sistema_electivas.reporte.dto.ReporteArchivoResponse;
 import com.unicauca.fiet.sistema_electivas.common.exception.InvalidStateException;
 import com.unicauca.fiet.sistema_electivas.common.exception.ResourceNotFoundException;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.enums.EstadoPeriodoAcademico;
 import org.apache.poi.ss.usermodel.Workbook;
-import org.springframework.core.io.Resource;
 
 public interface ReporteAsignacionService {
 

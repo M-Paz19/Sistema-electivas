@@ -1,6 +1,5 @@
-package com.unicauca.fiet.sistema_electivas.asignacion.dto;
+package com.unicauca.fiet.sistema_electivas.reporte.dto;
 
-import com.unicauca.fiet.sistema_electivas.archivo.model.CargaArchivo;
 import lombok.Data;
 import org.springframework.core.io.Resource;
 

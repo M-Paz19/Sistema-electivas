@@ -1,15 +1,17 @@
-package com.unicauca.fiet.sistema_electivas.asignacion.service;
+package com.unicauca.fiet.sistema_electivas.reporte.service;
 
 import com.unicauca.fiet.sistema_electivas.archivo.enums.TipoArchivo;
 import com.unicauca.fiet.sistema_electivas.archivo.model.CargaArchivo;
 import com.unicauca.fiet.sistema_electivas.archivo.repository.CargaArchivoRepository;
 import com.unicauca.fiet.sistema_electivas.archivo.service.ArchivoService;
 import com.unicauca.fiet.sistema_electivas.asignacion.dto.*;
+import com.unicauca.fiet.sistema_electivas.asignacion.service.ConsultaAsignacionService;
 import com.unicauca.fiet.sistema_electivas.common.exception.InvalidStateException;
 import com.unicauca.fiet.sistema_electivas.common.exception.ResourceNotFoundException;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.enums.EstadoPeriodoAcademico;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.model.PeriodoAcademico;
 import com.unicauca.fiet.sistema_electivas.periodo_academico.repository.PeriodoAcademicoRepository;
+import com.unicauca.fiet.sistema_electivas.reporte.dto.ReporteArchivoResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -17,7 +19,6 @@ import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -563,7 +564,7 @@ public class ReporteAsignacionServiceImpl implements ReporteAsignacionService {
     /**
      * {@inheritDoc}
      */
-    public ReporteArchivoResponse  obtenerArchivoReporteTecnico(Long periodoId) {
+    public ReporteArchivoResponse obtenerArchivoReporteTecnico(Long periodoId) {
         validarEstadoParaDescarga(periodoId);
 
         CargaArchivo archivo = cargaArchivoRepository

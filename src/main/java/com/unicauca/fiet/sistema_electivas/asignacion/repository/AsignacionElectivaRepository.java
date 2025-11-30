@@ -15,54 +15,24 @@ import java.util.Optional;
 public interface AsignacionElectivaRepository extends JpaRepository<AsignacionElectiva, Long> {
 
     /**
-     * Cuenta cuántas asignaciones con estado ASIGNADA existen para una oferta determinada,
-     * **exclusivamente para estudiantes pertenecientes a un programa específico**.
+     * Obtiene asignaciones filtradas por la oferta y por una lista de estados.
      *
-     * Lógica:
-     * - Toma todas las asignaciones (AsignacionElectiva) asociadas a la oferta.
-     * - Filtra solo las que están con estado = ASIGNADA.
-     * - Además, toma solo asignaciones cuyo código de estudiante pertenezca a estudiantes
-     *   cuya respuesta al formulario corresponde al programa indicado.
-     *
-     * Esto permite validar cuántos cupos se han asignado POR PROGRAMA dentro de una oferta.
-     *
-     * @param ofertaId  ID de la oferta de electiva.
-     * @param programaId ID del programa académico.
-     * @return Número de asignaciones ASIGNADAS para ese programa dentro de la oferta.
+     * @param ofertaId ID de la oferta académica.
+     * @param estados lista de estados válidos de asignación.
+     * @return lista de asignaciones que coinciden con los filtros.
      */
-    @Query("""
-        SELECT COUNT(a) 
-        FROM AsignacionElectiva a
-        WHERE a.oferta.id = :ofertaId
-          AND a.estadoAsignacion = 'ASIGNADA'
-          AND a.estudianteCodigo IN (
-              SELECT r.codigoEstudiante 
-              FROM RespuestasFormulario r
-              WHERE r.programa.id = :programaId
-          )
-    """)
-    int countAsignadasByOfertaAndPrograma(Long ofertaId, Long programaId);
-
-    @Query("""
-    SELECT COUNT(a)
-    FROM AsignacionElectiva a
-    WHERE a.oferta.id = :ofertaId
-      AND a.estadoAsignacion = 'LISTA_ESPERA'
-    """)
-    int countListaEsperaByOferta(Long ofertaId);
-
-    Optional<AsignacionElectiva> findByEstudianteCodigoAndOfertaIdAndNumeroOpcion(
-            String estudianteCodigo,
-            Long ofertaId,
-            Integer numeroOpcion
-    );
-
     List<AsignacionElectiva> findByOfertaIdAndEstadoAsignacionIn(
             Long ofertaId,
             List<EstadoAsignacion> estados
     );
 
-    // Devuelve todas las asignaciones de un estudiante en un período académico
+    /**
+     * Obtiene todas las asignaciones de un estudiante dentro de un período académico.
+     *
+     * @param codigoEstudiante código único del estudiante.
+     * @param periodoId ID del período académico.
+     * @return lista de asignaciones del estudiante para dicho período.
+     */
     @Query("""
         SELECT a
         FROM AsignacionElectiva a
@@ -73,4 +43,36 @@ public interface AsignacionElectivaRepository extends JpaRepository<AsignacionEl
             @Param("codigoEstudiante") String codigoEstudiante,
             @Param("periodoId") Long periodoId
     );
+
+    /**
+     * Obtiene todas las asignaciones realizadas en un período académico.
+     *
+     * @param periodoId ID del período.
+     * @return lista completa de asignaciones asociadas al período.
+     */
+    @Query("""
+        SELECT a
+        FROM AsignacionElectiva a
+        JOIN a.oferta o
+        WHERE o.periodo.id = :periodoId
+    """)
+    List<AsignacionElectiva> findByPeriodoId(Long periodoId);
+
+    /**
+     * Recupera el historial completo de asignaciones de un estudiante,
+     * ordenado desde el semestre más reciente al más antiguo.
+     *
+     * @param codigo código del estudiante.
+     * @return lista ordenada de asignaciones históricas.
+     */
+    @Query("""
+    SELECT ae
+    FROM AsignacionElectiva ae
+    JOIN ae.oferta o
+    JOIN o.periodo p
+    WHERE ae.estudianteCodigo = :codigo
+    ORDER BY p.semestre DESC
+    """)
+    List<AsignacionElectiva> findHistorialAsignaciones(String codigo);
+
 }

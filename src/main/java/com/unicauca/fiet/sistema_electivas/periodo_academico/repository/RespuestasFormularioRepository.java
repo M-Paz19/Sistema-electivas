@@ -107,5 +107,62 @@ public interface RespuestasFormularioRepository  extends JpaRepository<Respuesta
      */
     boolean existsByPeriodoIdAndEstadoIn(Long periodoId, List<EstadoRespuestaFormulario> estados);
 
+    /**
+     * Obtiene todas las respuestas de un período académico filtradas por estado,
+     * incluyendo la carga anticipada (fetch) de sus opciones seleccionadas.
+     *
+     * <p>Útil para procesos donde se requiere analizar respuestas completas
+     * sin disparar múltiples consultas adicionales.</p>
+     *
+     * @param periodoId ID del período académico.
+     * @param estados lista de estados permitidos.
+     * @return lista de respuestas con sus opciones asociadas.
+     */
+    @Query("""
+    SELECT DISTINCT r FROM RespuestasFormulario r
+    LEFT JOIN FETCH r.opciones o
+    WHERE r.periodo.id = :periodoId
+    AND r.estado IN :estados
+    """)
+    List<RespuestasFormulario> findByPeriodoAndEstadosWithOpciones(
+            @Param("periodoId") Long periodoId,
+            @Param("estados") List<EstadoRespuestaFormulario> estados);
+
+    /**
+     * Recupera el historial completo de respuestas que un estudiante ha
+     * enviado a lo largo de distintos períodos académicos.
+     *
+     * <p>Incluye información del período y las opciones seleccionadas,
+     * y se ordena del período más reciente al más antiguo.</p>
+     *
+     * @param codigo código del estudiante.
+     * @return lista de respuestas ordenadas por período y fecha.
+     */
+    @Query("""
+    SELECT rf
+    FROM RespuestasFormulario rf
+    JOIN FETCH rf.periodo p
+    LEFT JOIN FETCH rf.opciones o
+    WHERE rf.codigoEstudiante = :codigo
+    ORDER BY p.semestre DESC, rf.timestampRespuesta DESC
+    """)
+    List<RespuestasFormulario> findHistorialRespuestas(String codigo);
+
+    /**
+     * Busca coincidencias de estudiantes dentro de las respuestas del formulario,
+     * permitiendo filtrar por código, nombre o apellidos.
+     *
+     * <p>La búsqueda es insensible a mayúsculas/minúsculas.</p>
+     *
+     * @param filtro texto parcial para búsqueda.
+     * @return lista de respuestas que coinciden con el filtro.
+     */
+    @Query("""
+        SELECT r FROM RespuestasFormulario r
+        WHERE LOWER(r.codigoEstudiante) LIKE LOWER(CONCAT('%', :filtro, '%'))
+           OR LOWER(r.nombreEstudiante) LIKE LOWER(CONCAT('%', :filtro, '%'))
+           OR LOWER(r.apellidosEstudiante) LIKE LOWER(CONCAT('%', :filtro, '%'))
+    """)
+    List<RespuestasFormulario> buscarCoincidencias(String filtro);
 
 }

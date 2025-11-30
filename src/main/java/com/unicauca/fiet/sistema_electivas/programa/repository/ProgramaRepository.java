@@ -68,6 +68,19 @@ public interface ProgramaRepository extends JpaRepository<Programa, Long> {
      */
     Optional<Programa> findByNombreIgnoreCase(String nombre);
 
+    /**
+     * Busca un programa académico por nombre utilizando coincidencia flexible,
+     * ignorando acentos y mayúsculas/minúsculas.
+     *
+     * <p>La consulta aplica la función SQL <code>unaccent</code> para permitir
+     * coincidencias como “Sistemas”, “sistemas”, “sistémas”, etc.</p>
+     *
+     * <p>Además, filtra por un estado específico del programa.</p>
+     *
+     * @param nombre parte del nombre del programa a buscar, sin necesidad de coincidencia exacta.
+     * @param estado estado del programa que debe coincidir (por ejemplo: ACTIVO, INACTIVO).
+     * @return un Optional que contiene el programa encontrado si existe.
+     */
     @Query("""
     SELECT p FROM Programa p
     WHERE CAST(function('unaccent', lower(p.nombre)) AS string)
@@ -75,6 +88,4 @@ public interface ProgramaRepository extends JpaRepository<Programa, Long> {
       AND p.estado = :estado
 """)
     Optional<Programa> buscarFlexible(String nombre, EstadoPrograma estado);
-
-
 }

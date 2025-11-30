@@ -27,7 +27,7 @@ public enum EstadoRespuestaFormulario {
     FORMATO_INVALIDO("formato desconocido código estudiantil- revisión manual"),
     NO_CUMPLE("código estudiantil no valido por antigüedad"),
     CUMPLE("código estudiantil valido"),
-    DESCARTADO("descartado manualmente"),
+    DESCARTADO("descartado manualmente al tener un formato de codigo no valido"),
     INCLUIDO("incluido manualmente"),
 
     INCONSISTENTE_SIMCA("El codigo estudiantil no aparece existe o esta inactivo, sin información válida en SIMCA."),

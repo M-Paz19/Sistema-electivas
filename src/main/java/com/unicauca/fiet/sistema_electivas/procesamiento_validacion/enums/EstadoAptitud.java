@@ -23,7 +23,7 @@ public enum EstadoAptitud {
     NIVELADO_DESCARTADO("Nivelado descartado"),
     AVANCE_CALCULADO("Porcentaje de avance calculado"),
     APTO("Cumple los requisitos de aptitud"),
-    NO_APTO("No cumple los requisitos de aptitud"),
+    NO_APTO("No cumple los requisitos de aptitud, porcentaje de avance menor a 65%"),
     EXCLUIDO_POR_ELECTIVAS("El estudiante ya cursó todas las electivas"),
 
     ASIGNACION_PROCESADA("Asignación de electivas completada"),

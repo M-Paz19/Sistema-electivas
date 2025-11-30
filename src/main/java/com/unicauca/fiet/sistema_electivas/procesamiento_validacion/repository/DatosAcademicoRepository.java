@@ -139,12 +139,79 @@ public interface DatosAcademicoRepository extends JpaRepository<DatosAcademico, 
             @Param("estadoAptitud") EstadoAptitud estadoAptitud
     );
 
+    /**
+     * Busca los datos académicos de un estudiante para un período académico
+     * específico.
+     *
+     * <p>Devuelve un único registro si existe, ya que cada estudiante solo
+     * debe tener un conjunto de datos académicos por período.</p>
+     *
+     * @param codigo código del estudiante.
+     * @param periodoId ID del período académico.
+     * @return un Optional con los datos académicos si existen.
+     */
     @Query("""
     SELECT d FROM DatosAcademico d
     WHERE d.codigoEstudiante = :codigo
       AND d.respuesta.periodo.id = :periodoId
-""")
+    """)
     Optional<DatosAcademico> findByCodigoAndPeriodo(String codigo, Long periodoId);
+
+    /**
+     * Obtiene todos los registros académicos válidos para un período,
+     * es decir, aquellos cuyo estado de aptitud ya fue procesado para asignación.
+     *
+     * <p>Incluye carga anticipada (fetch) de la respuesta y sus opciones,
+     * evitando consultas adicionales posteriores.</p>
+     *
+     * @param periodoId ID del período académico.
+     * @return lista de datos académicos válidos junto con sus respuestas.
+     */
+    @Query("""
+    SELECT da 
+    FROM DatosAcademico da
+    JOIN FETCH da.respuesta r
+    LEFT JOIN FETCH r.opciones o
+    WHERE r.periodo.id = :periodoId
+      AND da.estadoAptitud = 'ASIGNACION_PROCESADA'
+    """)
+    List<DatosAcademico> findValidosConOpcionesPorPeriodo(Long periodoId);
+
+    /**
+     * Recupera el historial de datos académicos de un estudiante a través
+     * de todos los períodos en los que ha participado.
+     *
+     * <p>Los resultados se ordenan del período más reciente al más antiguo.</p>
+     *
+     * @param codigo código del estudiante.
+     * @return lista de datos académicos ordenados cronológicamente.
+     */
+    @Query("""
+    SELECT da
+    FROM DatosAcademico da
+    JOIN da.respuesta r
+    JOIN r.periodo p
+    WHERE da.codigoEstudiante = :codigo
+    ORDER BY p.semestre DESC
+    """)
+    List<DatosAcademico> findHistorialDatosAcademicos(String codigo);
+
+    /**
+     * Busca coincidencias de estudiantes dentro de los datos académicos,
+     * permitiendo filtro por código, nombres o apellidos.
+     *
+     * <p>La comparación se realiza de manera insensible a mayúsculas/minúsculas.</p>
+     *
+     * @param filtro texto parcial a buscar.
+     * @return lista de coincidencias encontradas.
+     */
+    @Query("""
+        SELECT d FROM DatosAcademico d
+        WHERE LOWER(d.codigoEstudiante) LIKE LOWER(CONCAT('%', :filtro, '%'))
+           OR LOWER(d.nombres) LIKE LOWER(CONCAT('%', :filtro, '%'))
+           OR LOWER(d.apellidos) LIKE LOWER(CONCAT('%', :filtro, '%'))
+    """)
+    List<DatosAcademico> buscarCoincidencias(String filtro);
 
 }
 

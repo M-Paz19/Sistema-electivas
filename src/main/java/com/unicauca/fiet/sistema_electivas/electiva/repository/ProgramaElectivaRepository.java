@@ -17,13 +17,33 @@ import java.util.List;
 @Repository
 public interface ProgramaElectivaRepository extends JpaRepository<ProgramaElectiva, ProgramaElectivaId> {
 
-    // Opcional: métodos personalizados, por ejemplo:
+    /**
+     * Verifica si existe una relación entre un programa y una electiva.
+     *
+     * @param programaId ID del programa.
+     * @param electivaId ID de la electiva.
+     * @return true si la relación existe.
+     */
     boolean existsByProgramaIdAndElectivaId(Long programaId, Long electivaId);
 
+    /**
+     * Elimina todas las relaciones entre un programa y una electiva,
+     * dado el ID de la electiva.
+     *
+     * <p>Usado especialmente cuando se elimina o desactiva una electiva.</p>
+     *
+     * @param electivaId ID de la electiva.
+     */
     @Modifying
     @Query("DELETE FROM ProgramaElectiva pe WHERE pe.electiva.id = :electivaId")
     void deleteByElectivaId(@Param("electivaId") Long electivaId);
 
+    /**
+     * Obtiene todas las relaciones programa–electiva asociadas a una electiva.
+     *
+     * @param electivaId ID de la electiva.
+     * @return lista de entidades ProgramaElectiva vinculadas a la electiva.
+     */
     @Query("SELECT pe FROM ProgramaElectiva pe WHERE pe.electiva.id = :electivaId")
     List<ProgramaElectiva> findByElectivaId(@Param("electivaId") Long electivaId);
 
@@ -38,6 +58,12 @@ public interface ProgramaElectivaRepository extends JpaRepository<ProgramaElecti
             @Param("estado") EstadoElectiva estado
     );
 
+    /**
+     * Obtiene todos los programas asociados a una electiva.
+     *
+     * @param electivaId ID de la electiva.
+     * @return lista de programas que tienen relación con la electiva.
+     */
     @Query("""
         SELECT pe.programa
         FROM ProgramaElectiva pe

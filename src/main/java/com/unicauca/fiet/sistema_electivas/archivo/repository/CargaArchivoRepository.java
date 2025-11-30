@@ -29,8 +29,29 @@ public interface CargaArchivoRepository extends JpaRepository<CargaArchivo, Long
      * @return lista de archivos que coinciden con los criterios
      */
     List<CargaArchivo> findByPeriodoIdAndTipoArchivo(Long periodoId, TipoArchivo tipoArchivo);
+
+    /**
+     * Cuenta cuántos archivos de un tipo específico existen para un período dado.
+     *
+     * <p>Se usa para validaciones como:
+     * verificar si ya existe un lote cargado antes de generar uno nuevo.</p>
+     *
+     * @param periodo      entidad PeriodoAcademico
+     * @param tipoArchivo  tipo de archivo
+     * @return número de coincidencias
+     */
     int countByPeriodoAndTipoArchivo(PeriodoAcademico periodo, TipoArchivo tipoArchivo);
 
+    /**
+     * Obtiene el archivo más reciente de un tipo específico dentro de un período.
+     *
+     * <p>Este método se usa para obtener siempre la última versión disponible
+     * (ordenada por fecha de carga descendente).</p>
+     *
+     * @param periodoId   ID del período académico
+     * @param tipoArchivo tipo de archivo
+     * @return último archivo cargado (si existe)
+     */
     Optional<CargaArchivo> findTopByPeriodoIdAndTipoArchivoOrderByFechaCargaDesc(
             Long periodoId,
             TipoArchivo tipoArchivo

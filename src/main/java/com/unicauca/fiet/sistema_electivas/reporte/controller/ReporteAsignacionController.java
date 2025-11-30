@@ -1,7 +1,7 @@
-package com.unicauca.fiet.sistema_electivas.asignacion.controller;
+package com.unicauca.fiet.sistema_electivas.reporte.controller;
 
-import com.unicauca.fiet.sistema_electivas.asignacion.dto.ReporteArchivoResponse;
-import com.unicauca.fiet.sistema_electivas.asignacion.service.ReporteAsignacionService;
+import com.unicauca.fiet.sistema_electivas.reporte.dto.ReporteArchivoResponse;
+import com.unicauca.fiet.sistema_electivas.reporte.service.ReporteAsignacionService;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.core.io.Resource;
