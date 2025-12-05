@@ -99,6 +99,7 @@ public class FormularioImportService {
             Map.entry("código del estudiante", "código del estudiante"),
             Map.entry("codigo del estudiante", "código del estudiante"),
             Map.entry("nombre", "nombre"),
+            Map.entry("nombres", "nombre"),
             Map.entry("apellidos", "apellidos"),
             Map.entry("programa académico", "programa académico"),
             Map.entry("programa", "programa académico"),
@@ -157,7 +158,7 @@ public class FormularioImportService {
                 datos.put("timestampRespuesta", getCellString(row, headerIndex.get("marca temporal"), formatter));
                 datos.put("Correo institucional", getCellString(row, headerIndex.get("correo institucional"), formatter));
                 datos.put("Código del estudiante", getCellString(row, headerIndex.get("código del estudiante"), formatter));
-                datos.put("Nombre", getCellString(row, headerIndex.get("nombre"), formatter));
+                datos.put("Nombres", getCellString(row, headerIndex.get("nombre"), formatter));
                 datos.put("Apellidos", getCellString(row, headerIndex.get("apellidos"), formatter));
                 datos.put("Programa académico", getCellString(row, headerIndex.get("programa académico"), formatter));
 
